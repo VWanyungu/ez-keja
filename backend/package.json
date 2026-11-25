@@ -13,18 +13,21 @@
     "migrate:rollback": "bun run node_modules/knex/bin/cli.js migrate:rollback --knexfile knexfile.ts",
     "migrate:make": "bun run node_modules/knex/bin/cli.js migrate:make --knexfile knexfile.ts",
     "seed": "bun run node_modules/knex/bin/cli.js seed:run --knexfile knexfile.ts",
-    "test": "NODE_ENV=development bun test"
+    "test": "NODE_ENV=development bun test",
+    "test:integration": "NODE_ENV=development bun run scripts/run-integration-tests.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "better-auth": "^1.7.28",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "helmet": "8.1.0",
     "knex": "^3.1.0",
     "morgan": "^1.10.0",
+    "nodemailer": "^10.6.1",
     "pg": "^8.16.3"
   },
   "devDependencies": {
@@ -35,6 +38,7 @@
     "@types/express": "^5.0.0",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.9.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "typescript": "^5.6.3"
   }
