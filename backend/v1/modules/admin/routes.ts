@@ -2,6 +2,10 @@ import express, { type RequestHandler, type Router } from 'express';
 import { created, ok } from '../../lib/respond.js';
 import { requireRole, requireSession } from '../../middlewares/auth.js';
 import {
+  createAdminReferenceRouter,
+  type AdminReferenceRouterDeps,
+} from '../reference/routes.js';
+import {
   parseCreateAdminInviteBody,
   parseInviteIdParam,
   type CreateAdminInviteInput,
@@ -23,6 +27,7 @@ export interface AdminRouterDeps {
   ) => Promise<CreatedAdminInviteResult>;
   listAdminInvites?: () => Promise<AdminInviteSummary[]>;
   revokeAdminInvite?: (adminUserId: string, inviteId: string) => Promise<AdminInviteSummary>;
+  reference?: AdminReferenceRouterDeps;
 }
 
 export function createAdminRouter(deps: AdminRouterDeps = {}): Router {
@@ -51,6 +56,8 @@ export function createAdminRouter(deps: AdminRouterDeps = {}): Router {
     const invite = await revokeInviteFn(req.auth!.user.id, inviteId);
     ok(res, invite, 'Admin invite revoked');
   });
+
+  router.use(createAdminReferenceRouter(deps.reference));
 
   return router;
 }
