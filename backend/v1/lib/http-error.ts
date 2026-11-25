@@ -1,6 +1,7 @@
 export interface HttpErrorOptions {
   expose?: boolean;
   code?: string;
+  data?: unknown;
   cause?: unknown;
 }
 
@@ -9,6 +10,7 @@ export class HttpError extends Error {
   readonly status: number;
   readonly expose: boolean;
   readonly code?: string;
+  readonly data?: unknown;
 
   constructor(status: number, message: string, options: HttpErrorOptions = {}) {
     super(message, options.cause !== undefined ? { cause: options.cause } : undefined);
@@ -16,6 +18,7 @@ export class HttpError extends Error {
     this.status = status;
     this.expose = options.expose ?? status < 500;
     if (options.code !== undefined) this.code = options.code;
+    if (options.data !== undefined) this.data = options.data;
   }
 }
 
