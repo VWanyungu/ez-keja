@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import express, { type ErrorRequestHandler } from 'express';
 import type { Server } from 'node:http';
 import { HttpError } from '../../lib/http-error.js';
+import { MAIL_TEST_ADDRESS } from '../../lib/mail-test-address.js';
 import { sendEmail, sendPasswordResetEmail } from '../../lib/mailer.js';
 import { signAccessToken, verifyAccessToken } from '../../lib/tokens.js';
 import { generateUuidV7, isUuidV7 } from '../../lib/uuid.js';
@@ -645,9 +646,6 @@ describe('auth router', () => {
   });
 });
 
-// The address the mail unit tests send "to" and "from" (all transports in them are fakes).
-const MAIL_TEST_ADDRESS = 'kingvixel90@gmail.com';
-
 describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
   it('signs and verifies access tokens and enforces token_version in middleware', async () => {
     const { accessToken } = await signAccessToken({
@@ -737,7 +735,7 @@ describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
 
     const result = await sendPasswordResetEmail(
       {
-        to: 'user@example.com',
+        to: MAIL_TEST_ADDRESS,
         name: 'Alice',
         resetUrl: 'https://app.khunt.local/reset-password?token=tok123',
         token: 'tok123',
@@ -745,7 +743,7 @@ describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
       {
         nodeEnv: 'production',
         apiKey: 'sendy-test-key',
-        from: 'Khunt <noreply@khunt.local>',
+        from: `Khunt <${MAIL_TEST_ADDRESS}>`,
         fetchFn: fakeFetch,
       },
     );
@@ -761,16 +759,16 @@ describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
       data: { type: string; attributes: { to: string; from: string; html: string } };
     };
     expect(body.data.type).toBe('emails');
-    expect(body.data.attributes.to).toBe('user@example.com');
+    expect(body.data.attributes.to).toBe(MAIL_TEST_ADDRESS);
     expect(body.data.attributes.html).toContain('tok123');
 
     await expect(
       sendEmail(
-        { to: 'a@b.com', subject: 'Hi', text: 'Hi', html: '<p>Hi</p>' },
+        { to: MAIL_TEST_ADDRESS, subject: 'Hi', text: 'Hi', html: '<p>Hi</p>' },
         {
           nodeEnv: 'production',
           apiKey: 'k',
-          from: 'noreply@khunt.local',
+          from: MAIL_TEST_ADDRESS,
           fetchFn: (async () =>
             new Response('Bad Request', { status: 400 })) as unknown as typeof fetch,
         },
