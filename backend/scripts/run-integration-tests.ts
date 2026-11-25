@@ -47,6 +47,7 @@ async function main(): Promise<void> {
       './v1/modules/auth/auth.integration.ts',
       './v1/modules/reference/reference.integration.ts',
       './v1/modules/files/files.integration.ts',
+      './v1/modules/buildings/buildings.integration.ts',
     ];
 
     for (const file of integrationFiles) {
