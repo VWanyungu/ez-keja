@@ -14,6 +14,12 @@ function extractCookies(res: Response): string {
   return setCookies.map((c) => c.split(';')[0]).join('; ');
 }
 
+// The refresh token only ever travels as an httpOnly cookie; returns "khunt_refresh=<token>".
+function extractRefreshCookie(res: Response): string {
+  const cookie = (res.headers.getSetCookie?.() ?? []).find((c) => c.startsWith('khunt_refresh='));
+  return cookie?.split(';')[0] ?? '';
+}
+
 beforeAll(async () => {
   const app = createApp();
   await new Promise<void>((resolve) => {
@@ -508,11 +514,12 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const regBody = (await regRes.json()) as {
       data: {
         user: { id: string };
-        tokens: { accessToken: string; refreshToken: string; tokenType: string };
+        tokens: { accessToken: string; refreshToken?: string; tokenType: string };
       };
     };
     const tokenUserId = regBody.data.user.id;
     expect(regBody.data.tokens.tokenType).toBe('Bearer');
+    expect(regBody.data.tokens.refreshToken).toBeUndefined();
 
     const meBearerRes = await fetch(`${baseUrl}/me`, {
       headers: {
@@ -523,31 +530,46 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     expect(meBearerRes.status).toBe(200);
 
     // 2. Refresh token rotation & reuse detection
-    const oldRefresh = regBody.data.tokens.refreshToken;
+    const oldRefresh = extractRefreshCookie(regRes);
+    expect(oldRefresh).toStartWith('khunt_refresh=');
+    const regSetCookie = regRes.headers.getSetCookie?.() ?? [];
+    expect(regSetCookie.find((c) => c.startsWith('khunt_refresh='))).toMatch(
+      /Path=\/auth; HttpOnly; SameSite=Lax/,
+    );
+
+    const noCookieRefreshRes = await fetch(`${baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'api-v': 'v1' },
+    });
+    expect(noCookieRefreshRes.status).toBe(401);
+
     const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ refreshToken: oldRefresh }),
+      headers: { 'api-v': 'v1', cookie: oldRefresh },
     });
     expect(refreshRes.status).toBe(200);
     const refreshBody = (await refreshRes.json()) as {
-      data: { accessToken: string; refreshToken: string };
+      data: { accessToken: string; refreshToken?: string };
     };
-    const rotatedRefresh = refreshBody.data.refreshToken;
+    expect(refreshBody.data.refreshToken).toBeUndefined();
+    const rotatedRefresh = extractRefreshCookie(refreshRes);
+    expect(rotatedRefresh).toStartWith('khunt_refresh=');
     expect(rotatedRefresh).not.toBe(oldRefresh);
 
     // Replaying the old rotated refresh token triggers reuse_detected and kills the family + session
     const replayRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ refreshToken: oldRefresh }),
+      headers: { 'api-v': 'v1', cookie: oldRefresh },
     });
     expect(replayRes.status).toBe(401);
+    // A dead token is cleared from the browser so it stops being replayed.
+    expect(replayRes.headers.getSetCookie?.().some((c) => /^khunt_refresh=;.*Max-Age=0/.test(c))).toBe(
+      true,
+    );
 
     const killedChildRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ refreshToken: rotatedRefresh }),
+      headers: { 'api-v': 'v1', cookie: rotatedRefresh },
     });
     expect(killedChildRes.status).toBe(401);
 
@@ -567,8 +589,9 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     });
     expect(login1Res.status).toBe(200);
     const login1Body = (await login1Res.json()) as {
-      data: { tokens: { accessToken: string; refreshToken: string } };
+      data: { tokens: { accessToken: string } };
     };
+    const login1Refresh = extractRefreshCookie(login1Res);
 
     const login2Res = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
@@ -577,8 +600,9 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     });
     expect(login2Res.status).toBe(200);
     const login2Body = (await login2Res.json()) as {
-      data: { tokens: { accessToken: string; refreshToken: string } };
+      data: { tokens: { accessToken: string } };
     };
+    const login2Refresh = extractRefreshCookie(login2Res);
     const login2Cookie = extractCookies(login2Res);
 
     // 4. Logout-all centrally invalidates BOTH access tokens, BOTH refresh tokens, and ALL sessions
@@ -601,14 +625,10 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
       expect(r.status).toBe(401);
     }
 
-    for (const rtok of [
-      login1Body.data.tokens.refreshToken,
-      login2Body.data.tokens.refreshToken,
-    ]) {
+    for (const rtok of [login1Refresh, login2Refresh]) {
       const r = await fetch(`${baseUrl}/auth/refresh`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-        body: JSON.stringify({ refreshToken: rtok }),
+        headers: { 'api-v': 'v1', cookie: rtok },
       });
       expect(r.status).toBe(401);
     }
@@ -626,8 +646,9 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     });
     expect(login3Res.status).toBe(200);
     const login3Body = (await login3Res.json()) as {
-      data: { tokens: { accessToken: string; refreshToken: string } };
+      data: { tokens: { accessToken: string } };
     };
+    const login3Refresh = extractRefreshCookie(login3Res);
 
     const origFetch = globalThis.fetch;
     const origNodeEnv = process.env.NODE_ENV;
@@ -687,8 +708,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
 
     const staleRefreshRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ refreshToken: login3Body.data.tokens.refreshToken }),
+      headers: { 'api-v': 'v1', cookie: login3Refresh },
     });
     expect(staleRefreshRes.status).toBe(401);
 
