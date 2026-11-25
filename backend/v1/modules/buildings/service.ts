@@ -13,6 +13,13 @@ import {
   staleVersion,
   withBuildingLock,
 } from '../../lib/catalogue.js';
+import {
+  freshnessOf,
+  isoMicros,
+  outdatedSql,
+  summariseBuildingFreshness,
+  type FreshnessState,
+} from '../../lib/freshness.js';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error.js';
 import { loadBuildingAccess } from '../../lib/maintainer.js';
 import type { AuthContext, UserRole } from '../../middlewares/auth.js';
@@ -273,12 +280,18 @@ export interface MyBuildingItem {
   verificationStatus: string;
   version: number;
   updatedAt: Date;
+  /** BR-030: the building's latest update among its Vacant space types, and its freshness. */
+  latestUpdate: string | null;
+  freshness: FreshnessState;
   spaceTypes: Array<{
     id: string;
     name: string;
     vacantCount: number;
-    lastConfirmedAt: Date;
+    /** ISO-8601 with microseconds: send it back unchanged in a bulk confirm (TX-02). */
+    lastConfirmedAt: string;
     daysSinceConfirmed: number;
+    /** BR-001 / FR-AVL-005, from `lib/freshness.ts`. */
+    freshness: FreshnessState;
   }>;
 }
 
@@ -313,26 +326,21 @@ export async function listMyBuildings(auth: AuthContext): Promise<MyBuildingItem
       'building_id',
       'name',
       'vacant_count',
-      'last_confirmed_at',
-      db.raw('floor(extract(epoch FROM (now() - last_confirmed_at)) / 86400)::int AS days_since_confirmed'),
+      db.raw(`${isoMicros('space_types.last_confirmed_at')} AS last_confirmed_at`),
+      db.raw('floor(extract(epoch FROM (clock_timestamp() - last_confirmed_at)) / 86400)::int AS days_since_confirmed'),
+      db.raw(`${outdatedSql('space_types')} AS outdated`),
     )) as Array<{
     id: string;
     building_id: string;
     name: string;
     vacant_count: number;
-    last_confirmed_at: Date;
+    last_confirmed_at: string;
     days_since_confirmed: number;
+    outdated: boolean;
   }>;
 
-  return buildings.map((b) => ({
-    id: b.id,
-    name: b.name,
-    areaId: b.area_id,
-    status: b.status,
-    verificationStatus: b.verification_status,
-    version: b.version,
-    updatedAt: b.updated_at,
-    spaceTypes: types
+  return buildings.map((b) => {
+    const own = types
       .filter((t) => t.building_id === b.id)
       .map((t) => ({
         id: t.id,
@@ -340,8 +348,22 @@ export async function listMyBuildings(auth: AuthContext): Promise<MyBuildingItem
         vacantCount: t.vacant_count,
         lastConfirmedAt: t.last_confirmed_at,
         daysSinceConfirmed: t.days_since_confirmed,
-      })),
-  }));
+        outdated: t.outdated,
+      }));
+    const { state, latestUpdate } = summariseBuildingFreshness(own);
+    return {
+      id: b.id,
+      name: b.name,
+      areaId: b.area_id,
+      status: b.status,
+      verificationStatus: b.verification_status,
+      version: b.version,
+      updatedAt: b.updated_at,
+      latestUpdate,
+      freshness: state,
+      spaceTypes: own.map(({ outdated, ...rest }) => ({ ...rest, freshness: freshnessOf(rest.vacantCount, outdated) })),
+    };
+  });
 }
 
 // ---- edit -----------------------------------------------------------------------------------

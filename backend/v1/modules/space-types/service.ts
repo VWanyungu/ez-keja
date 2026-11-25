@@ -5,6 +5,7 @@ import { writeAudit } from '../../lib/audit.js';
 import {
   actorTypeOf,
   assertBuildingEditable,
+  closeSpaceTypeDemand,
   diffChanges,
   eventSourceOf,
   guardPublishingMinimums,
@@ -27,8 +28,8 @@ import {
  * also allows 'space_type_removed' for both columns, which is the more exact word. Change these
  * two constants to switch (the notification wording is Phase 9).
  */
-const ENQUIRY_CLOSED_REASON = 'fully_let';
-const VIEWING_CANCEL_REASON = 'fully_let';
+const ENQUIRY_CLOSED_REASON = 'fully_let' as const;
+const VIEWING_CANCEL_REASON = 'fully_let' as const;
 
 type Conn = Knex | Knex.Transaction;
 
@@ -324,20 +325,11 @@ export async function removeSpaceType(auth: AuthContext, id: string): Promise<Re
           acted_as_staff: access.actsAsStaff,
           source: eventSourceOf(access),
         });
-        closedEnquiries = await trx('enquiries')
-          .where({ space_type_id: id })
-          .whereNot({ status: 'closed' })
-          .update({ status: 'closed', closed_reason: ENQUIRY_CLOSED_REASON, closed_at: trx.fn.now() });
-        cancelledViewings = await trx('viewing_requests')
-          .where({ space_type_id: id })
-          .whereIn('status', ['requested', 'accepted', 'counter_proposed'])
-          .whereRaw('COALESCE(counter_for, requested_for) > now()')
-          .update({
-            status: 'cancelled',
-            cancelled_by: auth.user.id,
-            cancelled_at: trx.fn.now(),
-            cancel_reason: VIEWING_CANCEL_REASON,
-          });
+        ({ closedEnquiries, cancelledViewings } = await closeSpaceTypeDemand(trx, id, {
+          enquiryReason: ENQUIRY_CLOSED_REASON,
+          viewingReason: VIEWING_CANCEL_REASON,
+          cancelledBy: auth.user.id,
+        }));
       },
       'This space type cannot be removed from a published building',
     );
