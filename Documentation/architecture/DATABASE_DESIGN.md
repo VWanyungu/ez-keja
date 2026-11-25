@@ -327,8 +327,9 @@ erDiagram
   }
   FILES {
     uuid id PK
-    text drive_id
-    text item_id
+    text public_id UK
+    text resource_type
+    text delivery_type
     text visibility
     text mime_type
     timestamptz purged_at
@@ -768,23 +769,25 @@ Seed (values are the SRS defaults; [TBD] items marked):
 ### 5.3 Catalogue
 
 #### `files` [REC] (SRS §9 lists photos only; a shared file table removes duplication)
-Metadata for every object stored in SharePoint (photos, verification evidence, ad images, profile photos). The bytes are never in the database (tech-stack standard).
+Metadata for every object stored in Cloudinary (photos, verification evidence, ad images, profile photos). The bytes are never in the database. *(v1.5: storage moved from SharePoint to Cloudinary, migration `20261125120015_files_cloudinary`.)*
 
 | Column | Type | Null | Default | Rules / notes |
 |---|---|---|---|---|
 | id | uuid | N | `app_uuidv7()` | **PK** |
-| drive_id | text | N | | Microsoft Graph drive id |
-| item_id | text | N | | Microsoft Graph item id |
+| public_id | text | N | | Cloudinary public id, e.g. `khunt/production/photos/<file id>`. Raw assets (PDFs) keep their `.pdf` extension. The folder prefix separates environments. |
+| resource_type | text | N | | `'image'` or `'raw'` (`ck_files_resource_type`). PDFs are stored as `raw`. |
+| delivery_type | text | N | | `'upload'` (publicly deliverable) or `'authenticated'` (reachable only through a signed request) (`ck_files_delivery_type`) |
+| format | text | N | | `'jpg'`, `'png'` or `'pdf'` (`ck_files_format`), derived from the detected file type |
 | original_name | text | N | | Display only; never a storage path. Blanked on erasure because file names can contain personal names. |
 | mime_type | text | N | | `CHECK (mime_type IN ('image/jpeg','image/png','application/pdf'))` per OQ-20 default, evidence may be PDF [ASM] |
 | size_bytes | bigint | N | | `> 0`. Upper bound is a service limit (OQ-20). |
 | width_px, height_px | integer | Y | | Images only |
-| visibility | text | N | | `'public'` (photos, ad images) or `'restricted'` (verification evidence, ID documents). Drives SharePoint permissions. |
+| visibility | text | N | | `'public'` (photos, ad images) or `'restricted'` (verification evidence, ID documents). Drives the Cloudinary delivery type: public files are `upload`, restricted files are `authenticated`. |
 | uploaded_by | uuid | Y | | FK → `auth_users(id)` |
-| purged_at | timestamptz | Y | | Set when the object was deleted from SharePoint (evidence retention, erasure) |
+| purged_at | timestamptz | Y | | Set when the object was deleted from Cloudinary (removed photos, evidence retention, erasure) |
 | created_at | timestamptz | N | `now()` | |
 
-Constraints: `ux_files_drive_item` `UNIQUE (drive_id, item_id)`; `ck_files_visibility` (`visibility IN ('public','restricted')`); `ck_files_mime` (`mime_type IN ('image/jpeg','image/png','application/pdf')`); `ck_files_size` (`size_bytes > 0`); `ux_files_id_visibility` `UNIQUE (id, visibility)`, the target of the composite foreign keys that force photos to reference `public` files and verification evidence to reference `restricted` files (review R-15).
+Constraints: `ux_files_public_id` `UNIQUE (public_id)`; `ck_files_visibility_delivery` (`visibility = 'public'` only with `delivery_type = 'upload'`, and `'restricted'` only with `'authenticated'`, so evidence can never be stored as a publicly deliverable asset); `ck_files_visibility` (`visibility IN ('public','restricted')`); `ck_files_mime` (`mime_type IN ('image/jpeg','image/png','application/pdf')`); `ck_files_size` (`size_bytes > 0`); `ux_files_id_visibility` `UNIQUE (id, visibility)`, the target of the composite foreign keys that force photos to reference `public` files and verification evidence to reference `restricted` files (review R-15).
 Indexes: `ix_files_uploaded_by`; `ix_files_purge_candidates` `(created_at) WHERE visibility = 'restricted' AND purged_at IS NULL` (retention job).
 
 #### `buildings` [REQ FR-UNT-001, FR-UNT-005, BR-012, §5.3 building status]
@@ -1260,7 +1263,7 @@ The full column-level constraints and every index are in §5 next to their table
 | `CHECK` value sets | about 35 | `status`, `role`, `language`, `reason` etc. as `IN (...)` |
 | `CHECK` cross-column | about 25 | Rent mode, management designation, verification decision shape, suspension shape, exclusive arcs, activation completeness |
 | Partial `UNIQUE` | 11 | Open enquiry thread, open report (2), pending verification (2), approved verification (2), one Cover, live space-type name, ad metric per day (2) |
-| Plain `UNIQUE` | about 14 | `auth_users.email`, `areas.slug` and lower name, category and slot codes, `files(drive_id,item_id)`, `photos.file_id`, `reminder_log` cycle, `consent_records`, `notification_deliveries` channel, `metric_snapshots` key |
+| Plain `UNIQUE` | about 14 | `auth_users.email`, `areas.slug` and lower name, category and slot codes, `files(public_id)`, `photos.file_id`, `reminder_log` cycle, `consent_records`, `notification_deliveries` channel, `metric_snapshots` key |
 
 ### 7.2 Database functions, triggers and the view
 
@@ -1392,7 +1395,7 @@ Each item is one Knex transaction. SQL is a sketch for the implementer.
 | TX-09 | **Suspend or reinstate a user** | Update `profiles`; remove the user's `auth_sessions` rows (a suspended user must not keep a live session, SRS §12). Lock affected buildings with `ORDER BY id FOR UPDATE`. For each building whose status is `draft`, `pending` or `published` and where this user is the **only** maintainer (evaluated after the lock): set `status='suspended'`, `suspension_cause='owner_suspended'`, `status_before_suspension=<previous>`. Buildings already `suspended` or `withdrawn` are skipped. For a co-maintained building that stays published, if the suspended user is its designated contact, reassign the contact to another active maintainer with a phone (TX-15) or suspend the building. Reinstating a user restores **only** `owner_suspended` buildings, and a restore to `published` re-runs the gate (T5). Notifications and audit rows in the same transaction. | FR-ADM-003, G-12 |
 | TX-10 | **Erase a user** | One transaction; steps in §10.6. | FR-PRV-002 |
 | TX-11 | **Ad counters** | Single-statement upsert with the partial-index predicate (`ON CONFLICT (campaign_id, metric_date) WHERE campaign_id IS NOT NULL DO UPDATE SET impressions = ad_daily_metrics.impressions + EXCLUDED.impressions`). Run **after** the response is sent (fire-and-forget; failures are logged and never affect the page, NFR-PRF-03); batch in memory and flush every 30 to 60 s if volume grows. | FR-ADV-008 |
-| TX-12 | **File and photo creation** | The SharePoint upload happens **before** the transaction. The transaction then inserts `files` and `photos`. If it fails, the uploaded object is orphaned; a nightly job removes SharePoint objects that have no `files` row. A `files` row with no photo or evidence reference older than 24 h is purged by the same job. | FR-MED-001, NFR-SEC-03 |
+| TX-12 | **File and photo creation** | The Cloudinary upload happens **before** the transaction. The transaction then inserts `files` and `photos`. If it fails, the service removes the uploaded object again (best effort). A `files` row with no photo, evidence, profile or ad reference older than 24 h is purged by `jobs/purge-files.ts` (asset destroyed, then row deleted); the same job destroys the assets of photos removed more than 30 days ago and sets their `files.purged_at`. | FR-MED-001, NFR-SEC-03 |
 | TX-13 | **Remove a space type; remove a photo; add a space type to a published building** | Lock the building row, then its space types ascending. Space-type removal: set `removed_at`, `removed_by`, write a `removed` event, close its open enquiries and cancel its future viewings (as TX-01), then run `building_publish_blockers`; refuse if the building is `published` and would have no live space type. Photo removal on a published building: refuse if it takes the building or the space type below the minimums, checked inside the lock so two concurrent removals cannot both pass. Adding a space type to a published building: it is created together with its `min_space_type_photos` photos in one transaction. | FR-UNT-007, FR-MED-004, FR-AVL-009, BR-018 |
 | TX-14 | **Restore a removed space type** | Lock the building, then the space type. Refuse if a live space type of the same name exists (`ux_space_types_building_name`); the caller supplies a new name. Require an explicit count: set `vacant_count`, `last_confirmed_at=clock_timestamp()`, clear `removed_at` and `removed_by`, write a `restored` event. | FR-UNT-007 |
 | TX-15 | **Add or remove a maintainer; set the designated contact** | Lock the `buildings` row `FOR UPDATE` first, then change `building_maintainers` or `buildings.contact_user_id` (same lock order as publish and TX-09, so no inversion with the foreign-key lock). Setting the contact requires the new contact to be a maintainer with a non-null `profiles.phone` (T8 backs this for published buildings). Removing a maintainer who is the contact is refused until another contact is set. Audit row in the same transaction. | FR-UNT-006, FR-ENQ-003, BR-018 |
@@ -1416,7 +1419,7 @@ With the cached parent column removed (review R-20), no trigger writes across ta
 
 | Class | Data | Where | Handling |
 |---|---|---|---|
-| **Restricted** | National ID and proof-of-authority documents; password hashes; session tokens | SharePoint (`files.visibility='restricted'`); `auth_accounts`; `auth_sessions` | Never returned by general APIs; password and token columns excluded from every `SELECT` list; evidence files accessible only to the Admin verification role; purged per retention |
+| **Restricted** | National ID and proof-of-authority documents; password hashes; session tokens | Cloudinary `authenticated` assets (`files.visibility='restricted'`); `auth_accounts`; `auth_sessions` | Never returned by general APIs; password and token columns excluded from every `SELECT` list; evidence files accessible only to the Admin verification role; purged per retention |
 | **Personal** | Email, display name, phone (`profiles.phone`), IP address and user agent, enquiry messages, report comments, contact events with a user | `auth_users`, `profiles`, `buildings`, `auth_sessions`, `enquiry_messages`, `reports`, `contact_events` | Subject to FR-PRV-002 and NFR-PRV-02; Admin reads are logged (`pii.view`); anonymised on erasure |
 | **Internal** | Verification status, audit log, follow-up notes, ad metrics | Various | Admin and service access only |
 | **Public** | Published building, space type, photo, rent, deposit, counts, area | Catalogue tables | Served to Guests; the contact phone is not public (BR-009 default) and the exact pin may not be (BR-019) |
@@ -1480,7 +1483,7 @@ Cost: a per-transaction `set_config(..., true)` helper in the data-access layer,
 ### 10.5 Sensitive data protection
 
 1. **Minimisation (OQ-15):** no national ID number column; no date of birth; no free-text address. Only the document file reference is stored.
-2. **Separation:** restricted files are a different `visibility`, mapped to restricted SharePoint permissions. Photos are public.
+2. **Separation:** restricted files are a different `visibility`, mapped to the Cloudinary `authenticated` delivery type, so they are only reachable through a short-lived signed link issued to an Admin (each issue is audited as `pii.view`). Photos are public.
 3. **No secrets in the audit log:** `audit_log.changes` stores personal fields by name only.
 4. **Phone numbers** are normalised to E.164 and exposed only through the BR-009 gate; `contact_events` records taps without the number.
 5. **Column encryption:** not recommended for Release 1 (disk-level encryption and TLS meet the SRS). If legal review (OQ-15) requires it, `profiles.phone` is the candidates, using application-side encryption.
@@ -1496,7 +1499,7 @@ One transaction (TX-10), after the service has withdrawn the user's Published bu
 3. Remove the user's `auth_sessions`, `auth_accounts` and `auth_verifications` rows (credentials and tracking data).
 4. `contact_events.user_id := NULL`.
 5. `buildings`: for every building the user maintains that is `published`, or `suspended` with `status_before_suspension = 'published'`: if others co-maintain it, the service reassigns `contact_user_id` to another maintainer with a phone first (the composite foreign key blocks removing a contact); otherwise the building is withdrawn. Where the user is the lister or only maintainer, set `landlord_name = 'Deleted user'` (not NULL: `ck_buildings_management` needs a name or a landlord account). Their Published buildings were withdrawn first (FR-PRV-002).
-6. Files uploaded by the user: set `purged_at` and blank `original_name`; the job removes the SharePoint objects. This covers evidence **and** the profile photo (public visibility).
+6. Files uploaded by the user: set `purged_at` and blank `original_name`; the job removes the Cloudinary assets. This covers evidence **and** the profile photo (public visibility).
 7. `notification_deliveries.last_error := NULL` for the user's notifications (provider errors can echo an email address).
 8. Free text written by or about the user (`enquiry_messages.body`, `reports.comment`, `followups.note`, `verification_cases.decision_reason`) is retained or blanked according to Q-D10. The default retains messages and blanks nothing else, which needs legal confirmation.
 9. Keep: `audit_log`, `availability_events`, `enquiries`, `viewing_requests`, `reports` (actor references now point at an anonymised user), `consent_records` and the `data_subject_requests` row itself.
@@ -1651,7 +1654,7 @@ Enable `pg_stat_statements` if the host allows it (it needs a server setting); r
 | ASM-14 | Free-text content (descriptions, messages) is stored as entered in one language (OQ-19). | A translations table. | Medium |
 | ASM-15 | Weekly history (`metric_snapshots`) is filterable by area, category and management type but not by lister; the lister filter of FR-RPT-001 applies to live metrics | Add a lister dimension | Low |
 | ASM-16 | "Verified identity field" for accounts (FR-VER-007) means `display_name` and `phone`, implemented as a service rule that opens a `material_change` case | Change the list | Low |
-| ASM-17 | Google Maps usage counters (NFR-MON-01, N-11) live in the monitoring stack, not this database; device-sized photos (NFR-PRF-02) rely on SharePoint thumbnails; bulk-import idempotency (FR-UNT-009) is a service-side duplicate check on (name, area, lister) | Add tables | Low |
+| ASM-17 | Google Maps usage counters (NFR-MON-01, N-11) live in the monitoring stack, not this database; device-sized photos (NFR-PRF-02) rely on Cloudinary on-the-fly resizing (`c_limit,w_<width>` URLs); bulk-import idempotency (FR-UNT-009) is a service-side duplicate check on (name, area, lister) | Add tables | Low |
 | ASM-18 | The PostgreSQL version is not known; `app_uuidv7()` hides the difference (native on 18 or later, PL/pgSQL otherwise) | Re-define the function | Low |
 
 ### 13.2 Questions for you (business or technical decisions)
@@ -1729,7 +1732,7 @@ The SRS §9 lists 20 entity groups and an ERD, and A.2 says no detailed model wa
 
 | Table | Why it is necessary |
 |---|---|
-| `files` | One place for SharePoint object metadata and the public versus restricted split (a data-protection requirement) |
+| `files` | One place for Cloudinary object metadata and the public versus restricted split (a data-protection requirement) |
 | `user_roles` | Your multi-role decision; ability to add Admin sub-roles later (OQ-23) |
 | `verification_evidence` | Removes a repeating group from `verification_cases` |
 | `reminder_log` | Makes reminders idempotent (FR-AVL-006) |
@@ -1806,7 +1809,7 @@ Verdict of the reviewer on v1.0: *not implementation-ready, foundation sound, fi
 
 ### 15.4 Requirements coverage after review
 
-The reviewer listed 14 coverage gaps; 10 are closed in v1.1 (FR-VER-007, with its account half as a service rule; RPT-M09; FR-RPT-001 filters; BR-004 events; FR-AVL-009 with future viewings and space-type removal; session removal on suspension; erasure together with the privilege model; role revocation; BR-018 after publication; FR-AVL-006 no-channel case). Three are recorded as scope notes rather than tables (ASM-17): Google Maps usage counters (monitoring stack), device-sized photos (SharePoint thumbnails), and bulk-import idempotency (service duplicate check). One remains a service rule by design: the "edited" half of BR-014, which depends on the audit log.
+The reviewer listed 14 coverage gaps; 10 are closed in v1.1 (FR-VER-007, with its account half as a service rule; RPT-M09; FR-RPT-001 filters; BR-004 events; FR-AVL-009 with future viewings and space-type removal; session removal on suspension; erasure together with the privilege model; role revocation; BR-018 after publication; FR-AVL-006 no-channel case). Three are recorded as scope notes rather than tables (ASM-17): Google Maps usage counters (monitoring stack), device-sized photos (Cloudinary resizing), and bulk-import idempotency (service duplicate check). One remains a service rule by design: the "edited" half of BR-014, which depends on the audit log.
 
 ### 15.5 Changes after your answers (v1.2)
 

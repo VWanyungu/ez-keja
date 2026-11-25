@@ -46,6 +46,7 @@ async function main(): Promise<void> {
     const integrationFiles = [
       './v1/modules/auth/auth.integration.ts',
       './v1/modules/reference/reference.integration.ts',
+      './v1/modules/files/files.integration.ts',
     ];
 
     for (const file of integrationFiles) {
