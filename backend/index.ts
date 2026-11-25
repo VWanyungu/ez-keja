@@ -4,6 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import 'dotenv/config';
 import checkVersion from './middlewares/version.js';
+import healthRoutes from './v1/modules/health/routes.js';
 
 
 const app = express();
@@ -13,9 +14,7 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'success', data: null, message: 'ok' });
-});
+app.use('/health', healthRoutes);
 
 app.use(checkVersion());
 
