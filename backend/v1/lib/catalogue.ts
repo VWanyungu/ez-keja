@@ -65,6 +65,36 @@ export function diffChanges(
   return changes;
 }
 
+export type DemandClosureReason = 'fully_let' | 'space_type_removed';
+
+/**
+ * TX-01 / TX-13: a space type stopped being available (count reached 0, or it was removed). Closes
+ * its open enquiries and cancels its future viewings (`requested`, `counter_proposed`, `accepted`
+ * whose time is still ahead; past-dated `requested` ones belong to the expiry job). Call inside the
+ * caller's transaction with the space type row already locked. Notifying clients is Phase 9.
+ */
+export async function closeSpaceTypeDemand(
+  trx: Knex.Transaction,
+  spaceTypeId: string,
+  opts: { enquiryReason: DemandClosureReason; viewingReason: DemandClosureReason; cancelledBy: string | null },
+): Promise<{ closedEnquiries: number; cancelledViewings: number }> {
+  const closedEnquiries = await trx('enquiries')
+    .where({ space_type_id: spaceTypeId })
+    .whereNot({ status: 'closed' })
+    .update({ status: 'closed', closed_reason: opts.enquiryReason, closed_at: trx.fn.now() });
+  const cancelledViewings = await trx('viewing_requests')
+    .where({ space_type_id: spaceTypeId })
+    .whereIn('status', ['requested', 'accepted', 'counter_proposed'])
+    .whereRaw('COALESCE(counter_for, requested_for) > now()')
+    .update({
+      status: 'cancelled',
+      cancelled_by: opts.cancelledBy,
+      cancelled_at: trx.fn.now(),
+      cancel_reason: opts.viewingReason,
+    });
+  return { closedEnquiries, cancelledViewings };
+}
+
 /** Roles held by each of the given users (empty set for an unknown user). */
 export async function rolesByUser(conn: Conn, userIds: string[]): Promise<Map<string, Set<UserRole>>> {
   const map = new Map<string, Set<UserRole>>(userIds.map((id) => [id, new Set<UserRole>()]));

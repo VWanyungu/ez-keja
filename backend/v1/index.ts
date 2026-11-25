@@ -1,8 +1,10 @@
 import express from 'express';
 import adminRoutes from './modules/admin/routes.js';
 import authRoutes from './modules/auth/routes.js';
+import availabilityRoutes from './modules/availability/routes.js';
 import buildingsRoutes from './modules/buildings/routes.js';
 import filesRoutes from './modules/files/routes.js';
+import followUpsRoutes from './modules/follow-ups/routes.js';
 import healthRoutes from './modules/health/routes.js';
 import meRoutes from './modules/me/routes.js';
 import {
@@ -24,6 +26,9 @@ router.use(filesRoutes);
 // Catalogue (Phase 5): absolute paths too (/buildings..., /space-types/...).
 router.use(buildingsRoutes);
 router.use(spaceTypesRoutes);
+// Availability (Phase 6): counts, bulk confirm, history, and the Admin follow-up queue.
+router.use(availabilityRoutes);
+router.use(followUpsRoutes);
 router.use('/areas', areasPublicRoutes);
 router.use('/currencies', currenciesPublicRoutes);
 router.use('/categories', categoriesPublicRoutes);

@@ -15,7 +15,7 @@ export type RentMode = (typeof RENT_MODES)[number];
 
 const MAX_MONEY = 999_999_999_999.99; // numeric(14,2)
 const MAX_SIZE_SQM = 999_999.99; // numeric(8,2)
-const MAX_VACANT_COUNT = 1_000_000;
+export const MAX_VACANT_COUNT = 1_000_000;
 
 function parseRentMode(value: unknown): RentMode {
   if (typeof value === 'string' && (RENT_MODES as readonly string[]).includes(value)) {
