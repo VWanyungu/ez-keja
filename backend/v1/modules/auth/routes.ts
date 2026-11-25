@@ -2,8 +2,9 @@ import express, { type Request, type RequestHandler, type Response, type Router 
 import type { IncomingHttpHeaders } from 'node:http';
 import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../../lib/auth.js';
-import { badRequest, forbidden, unauthorized } from '../../lib/http-error.js';
+import { badRequest, forbidden, HttpError, unauthorized } from '../../lib/http-error.js';
 import type { PrivacyNoticeVersion } from '../../lib/privacy-notice.js';
+import { clearRefreshCookie, readRefreshCookie, refreshCookie } from '../../lib/refresh-cookie.js';
 import { created, ok } from '../../lib/respond.js';
 import {
   revokeAllUserTokens,
@@ -18,7 +19,6 @@ import {
   parseAcceptConsentBody,
   parseForgotPasswordBody,
   parseLoginBody,
-  parseRefreshTokenBody,
   parseRegisterBody,
   parseResetPasswordBody,
   type AcceptAdminInviteInput,
@@ -85,6 +85,13 @@ function getRequestMeta(req: Request): TokenRequestMeta {
 function appendSetCookies(res: Response, cookies: string[]): void {
   if (cookies.length === 0) return;
   res.setHeader('set-cookie', cookies);
+}
+
+/** The refresh token travels only in an httpOnly cookie, never in the JSON body. */
+function sendTokens(res: Response, tokens: TokenPair, sessionCookies: string[] = []) {
+  const { refreshToken, ...publicTokens } = tokens;
+  appendSetCookies(res, [...sessionCookies, refreshCookie(refreshToken, tokens.refreshExpiresAt)]);
+  return publicTokens;
 }
 
 async function defaultSignInWithEmail(
@@ -209,8 +216,7 @@ export function createAuthRouter(deps: AuthRouterDeps = {}): Router {
       signIn.sessionToken,
       getRequestMeta(req),
     );
-    appendSetCookies(res, signIn.cookies);
-    created(res, { ...result, tokens }, 'Account registered');
+    created(res, { ...result, tokens: sendTokens(res, tokens, signIn.cookies) }, 'Account registered');
   });
 
   router.post('/login', async (req, res) => {
@@ -220,8 +226,7 @@ export function createAuthRouter(deps: AuthRouterDeps = {}): Router {
       loadAccountFn(signIn.userId),
       issueTokensFn(signIn.userId, signIn.sessionToken, getRequestMeta(req)),
     ]);
-    appendSetCookies(res, signIn.cookies);
-    ok(res, { ...account, tokens }, 'Logged in');
+    ok(res, { ...account, tokens: sendTokens(res, tokens, signIn.cookies) }, 'Logged in');
   });
 
   router.post('/forgot-password', async (req, res) => {
@@ -241,22 +246,32 @@ export function createAuthRouter(deps: AuthRouterDeps = {}): Router {
   });
 
   router.post('/refresh', async (req, res) => {
-    const input = parseRefreshTokenBody(req.body);
-    const tokens = await rotateRefreshFn(input.refreshToken, getRequestMeta(req));
-    ok(res, tokens, 'Token refreshed');
+    const refreshToken = readRefreshCookie(req.headers);
+    if (!refreshToken) {
+      throw unauthorized('Missing refresh token.', { code: 'INVALID_REFRESH_TOKEN' });
+    }
+
+    try {
+      const tokens = await rotateRefreshFn(refreshToken, getRequestMeta(req));
+      ok(res, sendTokens(res, tokens), 'Token refreshed');
+    } catch (err) {
+      // A dead refresh token must not keep being replayed by the browser.
+      if (err instanceof HttpError && err.status < 500) appendSetCookies(res, [clearRefreshCookie()]);
+      throw err;
+    }
   });
 
   router.post('/logout', sessionAuth, async (req, res) => {
     await revokeSessionFn(req.auth!.user.id, req.auth!.session.id);
     const cookies = await clearCookiesFn(req.headers);
-    appendSetCookies(res, cookies);
+    appendSetCookies(res, [...cookies, clearRefreshCookie()]);
     ok(res, { loggedOut: true }, 'Logged out');
   });
 
   router.post('/logout-all', sessionAuth, async (req, res) => {
     await revokeAllFn(req.auth!.user.id);
     const cookies = await clearCookiesFn(req.headers);
-    appendSetCookies(res, cookies);
+    appendSetCookies(res, [...cookies, clearRefreshCookie()]);
     ok(res, { revokedAll: true }, 'Logged out of all sessions');
   });
 
@@ -288,8 +303,11 @@ export function createAuthRouter(deps: AuthRouterDeps = {}): Router {
       signIn.sessionToken,
       getRequestMeta(req),
     );
-    appendSetCookies(res, signIn.cookies);
-    created(res, { ...result, tokens }, 'Admin account activated');
+    created(
+      res,
+      { ...result, tokens: sendTokens(res, tokens, signIn.cookies) },
+      'Admin account activated',
+    );
   });
 
   return router;

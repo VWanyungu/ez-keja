@@ -39,10 +39,6 @@ export interface ResetPasswordInput {
   newPassword: string;
 }
 
-export interface RefreshTokenInput {
-  refreshToken: string;
-}
-
 export interface AcceptConsentInput {
   accepted: true;
   version?: string;
@@ -74,7 +70,6 @@ const REGISTER_FIELDS = [
 const LOGIN_FIELDS = ['email', 'password'] as const;
 const FORGOT_PASSWORD_FIELDS = ['email', 'redirectTo'] as const;
 const RESET_PASSWORD_FIELDS = ['token', 'newPassword'] as const;
-const REFRESH_FIELDS = ['refreshToken'] as const;
 const CONSENT_FIELDS = ['accepted', 'version'] as const;
 
 const ACCEPT_INVITE_FIELDS = [
@@ -192,17 +187,6 @@ export function parseResetPasswordBody(raw: unknown): ResetPasswordInput {
   const newPassword = parseRequiredPassword(obj.newPassword);
 
   return { token: obj.token.trim(), newPassword };
-}
-
-export function parseRefreshTokenBody(raw: unknown): RefreshTokenInput {
-  const obj = asRecord(raw);
-  rejectUnknownFields(obj, REFRESH_FIELDS);
-
-  if (typeof obj.refreshToken !== 'string' || obj.refreshToken.trim().length < 16) {
-    throw badRequest('Field "refreshToken" is required.');
-  }
-
-  return { refreshToken: obj.refreshToken.trim() };
 }
 
 export function parseAcceptConsentBody(raw: unknown): AcceptConsentInput {

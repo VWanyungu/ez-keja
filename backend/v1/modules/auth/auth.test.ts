@@ -16,7 +16,6 @@ import {
   parseAcceptConsentBody,
   parseForgotPasswordBody,
   parseLoginBody,
-  parseRefreshTokenBody,
   parseRegisterBody,
   parseResetPasswordBody,
 } from './schemas.js';
@@ -444,13 +443,17 @@ describe('auth router', () => {
 
     const body = (await res.json()) as {
       status: string;
-      data: { tokens: { accessToken: string; refreshToken: string } };
+      data: { tokens: { accessToken: string; refreshToken?: string } };
     };
     expect(res.status).toBe(201);
     expect(body.status).toBe('success');
     expect(body.data.tokens.accessToken).toBe('jwt-access-token');
-    expect(body.data.tokens.refreshToken).toBe('opaque-refresh-token');
-    expect(res.headers.get('set-cookie')).toContain('better-auth.session_token=abc');
+    // The refresh token is delivered only as an httpOnly cookie, never in the JSON body.
+    expect(body.data.tokens.refreshToken).toBeUndefined();
+    const setCookie = res.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain('better-auth.session_token=abc');
+    expect(setCookie).toContain('khunt_refresh=opaque-refresh-token');
+    expect(setCookie).toMatch(/khunt_refresh=[^;]+; Path=\/auth; HttpOnly; SameSite=Lax/);
   });
 
   it('records re-consent via POST /auth/consent', async () => {
@@ -616,20 +619,29 @@ describe('auth router', () => {
     expect(resetRes.status).toBe(200);
     expect(state.resetCalledWith).toEqual({ token: 'reset-tok-123', newPassword: 'newpassword123' });
 
+    const noCookieRes = await fetch(`${baseUrl}/auth/refresh`, { method: 'POST' });
+    expect(noCookieRes.status).toBe(401);
+
     const refreshRes = await fetch(`${baseUrl}/auth/refresh`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ refreshToken: 'refresh-1-long-enough-token' }),
+      headers: { cookie: 'khunt_refresh=refresh-1-long-enough-token' },
     });
     expect(refreshRes.status).toBe(200);
-    const refreshBody = (await refreshRes.json()) as { data: { accessToken: string } };
+    const refreshBody = (await refreshRes.json()) as {
+      data: { accessToken: string; refreshToken?: string };
+    };
     expect(refreshBody.data.accessToken).toBe('access-2');
+    expect(refreshBody.data.refreshToken).toBeUndefined();
+    expect(refreshRes.headers.get('set-cookie')).toContain(
+      'khunt_refresh=refresh-2-long-enough-token',
+    );
 
     const logoutAllRes = await fetch(`${baseUrl}/auth/logout-all`, {
       method: 'POST',
     });
     expect(logoutAllRes.status).toBe(200);
     expect(state.revokedAllUserId).toBe(fakeAuth.user.id);
+    expect(logoutAllRes.headers.get('set-cookie')).toMatch(/khunt_refresh=; .*Max-Age=0/);
   });
 });
 
@@ -708,7 +720,6 @@ describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
       token: 'abc123',
       newPassword: 'newpassword123',
     });
-    expect(() => parseRefreshTokenBody({ refreshToken: 'short' })).toThrow(HttpError);
   });
 
   it('posts JSON:API email payload to usesendy.com in production', async () => {
