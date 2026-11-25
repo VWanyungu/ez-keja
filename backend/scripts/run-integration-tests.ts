@@ -43,18 +43,26 @@ async function main(): Promise<void> {
       await testKnex.destroy();
     }
 
-    const proc = Bun.spawn(['bun', 'test', './v1/modules/auth/auth.integration.ts'], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        NODE_ENV: 'development',
-        DB_NAME: testDbName,
-      },
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
+    const integrationFiles = [
+      './v1/modules/auth/auth.integration.ts',
+      './v1/modules/reference/reference.integration.ts',
+    ];
 
-    exitCode = await proc.exited;
+    for (const file of integrationFiles) {
+      const proc = Bun.spawn(['bun', 'test', file], {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          NODE_ENV: 'development',
+          DB_NAME: testDbName,
+        },
+        stdout: 'inherit',
+        stderr: 'inherit',
+      });
+
+      exitCode = await proc.exited;
+      if (exitCode !== 0) break;
+    }
   } finally {
     const cleanupClient = new Client({
       host: baseConn.host,
