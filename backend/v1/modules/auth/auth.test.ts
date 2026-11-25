@@ -645,6 +645,9 @@ describe('auth router', () => {
   });
 });
 
+// The address the mail unit tests send "to" and "from" (all transports in them are fakes).
+const MAIL_TEST_ADDRESS = 'kingvixel90@gmail.com';
+
 describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
   it('signs and verifies access tokens and enforces token_version in middleware', async () => {
     const { accessToken } = await signAccessToken({
@@ -786,15 +789,17 @@ describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
 
     const result = await sendPasswordResetEmail(
       {
-        to: 'dev@example.com',
+        to: MAIL_TEST_ADDRESS,
         name: 'Dev User',
         resetUrl: 'http://localhost:5173/reset-password?token=devtok',
         token: 'devtok',
       },
       {
         nodeEnv: 'staging',
-        gmailUser: 'khunt.dev@gmail.com',
+        gmailUser: MAIL_TEST_ADDRESS,
         gmailAppPassword: 'app-password',
+        // Pinned so the result never depends on MAIL_FROM in a developer's .env.
+        from: MAIL_TEST_ADDRESS,
         createGmailTransport: (creds) => {
           capture.transportCreds = creds;
           return {
@@ -809,17 +814,18 @@ describe('access tokens, bearer middleware, and usesendy.com mailer', () => {
 
     expect(result).toEqual({ sent: true, provider: 'gmail' });
     expect(capture.transportCreds).toEqual({
-      user: 'khunt.dev@gmail.com',
+      user: MAIL_TEST_ADDRESS,
       pass: 'app-password',
     });
-    expect(capture.sentMail?.from).toBe('khunt.dev@gmail.com');
-    expect(capture.sentMail?.to).toBe('dev@example.com');
+    expect(capture.sentMail?.from).toBe(MAIL_TEST_ADDRESS);
+    expect(capture.sentMail?.to).toBe(MAIL_TEST_ADDRESS);
     expect(capture.sentMail?.text).toContain('devtok');
 
-    // Staging fails closed when Gmail credentials are missing
+    // Staging fails closed when Gmail credentials are missing. Empty values must not fall back to
+    // the real GMAIL_* variables in .env, or this test would send a real email.
     await expect(
       sendEmail(
-        { to: 'a@b.com', subject: 'Hi', text: 'Hi', html: '<p>Hi</p>' },
+        { to: MAIL_TEST_ADDRESS, subject: 'Hi', text: 'Hi', html: '<p>Hi</p>' },
         { nodeEnv: 'staging', gmailUser: '', gmailAppPassword: '' },
       ),
     ).rejects.toThrow('GMAIL_USER and GMAIL_APP_PASSWORD must be configured in staging.');
