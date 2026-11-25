@@ -100,8 +100,9 @@ async function sendViaGmail(
   env: string,
   config: MailerConfig,
 ): Promise<SendEmailResult> {
-  const user = config.gmailUser?.trim() || process.env.GMAIL_USER?.trim();
-  const pass = config.gmailAppPassword || process.env.GMAIL_APP_PASSWORD;
+  // `??` not `||`: an explicit empty value means "not configured", it must not fall back to .env.
+  const user = (config.gmailUser ?? process.env.GMAIL_USER)?.trim();
+  const pass = config.gmailAppPassword ?? process.env.GMAIL_APP_PASSWORD;
   const from = config.from?.trim() || process.env.MAIL_FROM?.trim() || user;
 
   if (!user || !pass) {
