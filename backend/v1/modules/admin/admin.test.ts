@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import express, { type ErrorRequestHandler } from 'express';
 import type { Server } from 'node:http';
 import { HttpError, forbidden } from '../../lib/http-error.js';
+import { mailTestAddress } from '../../lib/mail-test-address.js';
 import type { AuthContext } from '../../middlewares/auth.js';
 import { parseCreateAdminInviteBody, parseInviteIdParam } from './schemas.js';
 import { createAdminRouter } from './routes.js';
@@ -72,11 +73,11 @@ function makeAdminAuth(): AuthContext {
 describe('admin invite schemas', () => {
   it('normalizes email and applies default expiration', () => {
     const parsed = parseCreateAdminInviteBody({
-      email: '  NewAdmin@Khunt.local ',
+      email: `  ${mailTestAddress('NewAdmin').toUpperCase()} `,
       displayName: 'Staff User',
     });
     expect(parsed).toEqual({
-      email: 'newadmin@khunt.local',
+      email: mailTestAddress('newadmin'),
       displayName: 'Staff User',
       expiresInHours: 72,
     });
@@ -85,7 +86,7 @@ describe('admin invite schemas', () => {
   it('rejects out-of-range expiry and invalid invite ids', () => {
     expect(() =>
       parseCreateAdminInviteBody({
-        email: 'a@b.com',
+        email: mailTestAddress('expiry'),
         displayName: 'Staff',
         expiresInHours: 0,
       }),
@@ -118,7 +119,7 @@ describe('/admin/invites routes', () => {
     const res = await fetch(`http://127.0.0.1:${addr.port}/admin/invites`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 's@khunt.local', displayName: 'Staff' }),
+      body: JSON.stringify({ email: mailTestAddress('non-admin'), displayName: 'Staff' }),
     });
     expect(res.status).toBe(403);
   });
@@ -128,7 +129,7 @@ describe('/admin/invites routes', () => {
     const now = new Date('2026-11-25T12:00:00Z');
     const summary = {
       id: '019363c8-1234-7000-8000-000000000050',
-      email: 'staff@khunt.local',
+      email: mailTestAddress('staff'),
       displayName: 'Staff',
       invitedBy: adminAuth.user.id,
       expiresAt: new Date(now.getTime() + 72 * 3_600_000),
@@ -166,7 +167,7 @@ describe('/admin/invites routes', () => {
     const createRes = await fetch(`http://127.0.0.1:${addr.port}/admin/invites`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'staff@khunt.local', displayName: 'Staff' }),
+      body: JSON.stringify({ email: mailTestAddress('staff'), displayName: 'Staff' }),
     });
     const createBody = (await createRes.json()) as {
       status: string;

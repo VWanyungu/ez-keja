@@ -3,8 +3,13 @@ import type { Server } from 'node:http';
 import { createApp } from '../../../app.js';
 import db, { closeDb } from '../../db/knex.js';
 import { closeAuthPool } from '../../lib/auth.js';
+import { mailTestAddress } from '../../lib/mail-test-address.js';
 import { generateUuidV7, isUuidV7 } from '../../lib/uuid.js';
 import { registerAccount } from './service.js';
+
+// Every address that can receive mail here is a real, deliverable inbox (plus-tagged so each is
+// unique). With real mail keys in .env the invite and reset emails are actually delivered.
+const TOKENS_USER_EMAIL = mailTestAddress('tokens-user');
 
 let server: Server;
 let baseUrl: string;
@@ -369,7 +374,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const nonAdminRes = await fetch(`${baseUrl}/admin/invites`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1', cookie: agentCookie },
-      body: JSON.stringify({ email: 'newadmin@khunt.local', displayName: 'New Admin' }),
+      body: JSON.stringify({ email: mailTestAddress('newadmin'), displayName: 'New Admin' }),
     });
     expect(nonAdminRes.status).toBe(403);
     const nonAdminBody = (await nonAdminRes.json()) as { code?: string };
@@ -379,7 +384,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const createRes = await fetch(`${baseUrl}/admin/invites`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1', cookie: adminCookie },
-      body: JSON.stringify({ email: 'NewAdmin@Khunt.local', displayName: 'New Admin' }),
+      body: JSON.stringify({ email: mailTestAddress('NewAdmin'), displayName: 'New Admin' }),
     });
     expect(createRes.status).toBe(201);
     const createBody = (await createRes.json()) as {
@@ -387,7 +392,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     };
     const { invite, token } = createBody.data;
     expect(isUuidV7(invite.id)).toBe(true);
-    expect(invite.email).toBe('newadmin@khunt.local');
+    expect(invite.email).toBe(mailTestAddress('newadmin'));
     expect(invite.status).toBe('pending');
     expect(token.length).toBeGreaterThan(20);
 
@@ -399,7 +404,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const previewBody = (await previewRes.json()) as {
       data: { email: string; displayName: string; privacyNotice: { version: string } };
     };
-    expect(previewBody.data.email).toBe('newadmin@khunt.local');
+    expect(previewBody.data.email).toBe(mailTestAddress('newadmin'));
     expect(previewBody.data.privacyNotice.version).toBe('2026-11-25-v2');
 
     // Accepting without privacy notice is rejected
@@ -465,7 +470,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const createSecondRes = await fetch(`${baseUrl}/admin/invites`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1', cookie: newAdminCookie },
-      body: JSON.stringify({ email: 'revoked-admin@khunt.local', displayName: 'Revoked Admin' }),
+      body: JSON.stringify({ email: mailTestAddress('revoked-admin'), displayName: 'Revoked Admin' }),
     });
     expect(createSecondRes.status).toBe(201);
     const secondBody = (await createSecondRes.json()) as {
@@ -503,7 +508,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1' },
       body: JSON.stringify({
-        email: 'tokens-user@example.com',
+        email: TOKENS_USER_EMAIL,
         password: 'password123',
         displayName: 'Token User',
         role: 'client',
@@ -585,7 +590,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const login1Res = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ email: 'tokens-user@example.com', password: 'password123' }),
+      body: JSON.stringify({ email: TOKENS_USER_EMAIL, password: 'password123' }),
     });
     expect(login1Res.status).toBe(200);
     const login1Body = (await login1Res.json()) as {
@@ -596,7 +601,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const login2Res = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ email: 'tokens-user@example.com', password: 'password123' }),
+      body: JSON.stringify({ email: TOKENS_USER_EMAIL, password: 'password123' }),
     });
     expect(login2Res.status).toBe(200);
     const login2Body = (await login2Res.json()) as {
@@ -642,7 +647,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const login3Res = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ email: 'tokens-user@example.com', password: 'password123' }),
+      body: JSON.stringify({ email: TOKENS_USER_EMAIL, password: 'password123' }),
     });
     expect(login3Res.status).toBe(200);
     const login3Body = (await login3Res.json()) as {
@@ -677,7 +682,7 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
       const forgotRes = await fetch(`${baseUrl}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-        body: JSON.stringify({ email: 'tokens-user@example.com' }),
+        body: JSON.stringify({ email: TOKENS_USER_EMAIL }),
       });
       expect(forgotRes.status).toBe(200);
       expect(capturedResetToken.length).toBeGreaterThan(10);
@@ -716,14 +721,14 @@ describe('Auth, accounts, consent, /me, and admin invites (PostgreSQL integratio
     const oldPassLogin = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ email: 'tokens-user@example.com', password: 'password123' }),
+      body: JSON.stringify({ email: TOKENS_USER_EMAIL, password: 'password123' }),
     });
     expect(oldPassLogin.status).toBe(401);
 
     const newPassLogin = await fetch(`${baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'api-v': 'v1' },
-      body: JSON.stringify({ email: 'tokens-user@example.com', password: 'newpassword456' }),
+      body: JSON.stringify({ email: TOKENS_USER_EMAIL, password: 'newpassword456' }),
     });
     expect(newPassLogin.status).toBe(200);
 
