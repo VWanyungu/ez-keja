@@ -62,7 +62,7 @@ export default function SearchPage() {
           ) : (
             <>
               {buildings.length > 0 && (
-                <p className="text-lg font-medium leading-[26px]">
+                <p className="text-xs font-medium text-muted-foreground">
                   {from === to && current === 0 && !search.hasNextPage
                     ? t('results.showingOne')
                     : t('results.showingRange', { from, to })}
