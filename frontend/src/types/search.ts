@@ -37,6 +37,8 @@ export interface SearchPage {
 
 /** What the search screens let a visitor pick. Kept in the URL, so a search can be shared. */
 export interface SearchFilters {
+  /** Free text, matched against the building name and its area name. */
+  q?: string;
   areaId?: string;
   categoryId?: string;
   /** In KES, the platform's default currency. */

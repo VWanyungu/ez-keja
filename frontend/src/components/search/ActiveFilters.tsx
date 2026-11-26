@@ -27,7 +27,7 @@ export function ActiveFilters({ values, onChange, areas, categories }: ActiveFil
   return (
     <ul className="flex flex-wrap items-center gap-2" aria-label={t('active.label')}>
       {pills.map(({ key, label }) => (
-        <li key={key} className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium tracking-[0.01em]">
+        <li key={key} className="flex items-center gap-1.5 rounded-full border border-line bg-muted px-3 py-1.5 text-xs font-medium tracking-[0.01em]">
           {label}
           <button type="button" aria-label={t('active.remove', { label })} onClick={() => onChange({ ...values, [key]: undefined })}>
             <img src={closeUrl} alt="" className="size-3 dark:invert" />

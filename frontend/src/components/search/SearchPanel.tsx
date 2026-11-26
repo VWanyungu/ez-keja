@@ -19,7 +19,7 @@ interface SearchPanelProps {
   className?: string;
 }
 
-const Rule = () => <div className="h-px bg-border" />;
+const Rule = () => <div className="h-px bg-line" />;
 
 /** One surface with a single hairline; the soft ambient shadow does the lifting. */
 export function SearchPanel({ values, onChange, areas, categories, expandable = false, className }: SearchPanelProps) {
@@ -28,7 +28,7 @@ export function SearchPanel({ values, onChange, areas, categories, expandable = 
   const [open, setOpen] = useState(moreCount > 0);
 
   return (
-    <div className={cn('overflow-hidden rounded-3xl bg-card shadow-float ring-1 ring-foreground/10', className)}>
+    <div className={cn('overflow-hidden rounded-3xl bg-card border border-line shadow-float', className)}>
       <div>
         <SearchFields values={values} onChange={onChange} areas={areas} categories={categories} />
         {expandable && (

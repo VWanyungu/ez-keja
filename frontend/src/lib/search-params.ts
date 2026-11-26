@@ -4,11 +4,17 @@ export const PAGE_SIZE = 8;
 /** The results page shows a full three-column grid per page. */
 export const RESULTS_PAGE_SIZE = 9;
 
+/** The API refuses a longer `q`. */
+export const MAX_QUERY_LENGTH = 100;
+
 const MANAGEMENT: readonly string[] = ['agent', 'landlord'];
 
 /** URL to filters. Anything that does not parse is dropped rather than sent to the API. */
 export function filtersFromParams(params: URLSearchParams): SearchFilters {
   const filters: SearchFilters = {};
+
+  const q = params.get('q')?.trim().slice(0, MAX_QUERY_LENGTH);
+  if (q) filters.q = q;
 
   const areaId = params.get('areaId');
   if (areaId) filters.areaId = areaId;
@@ -30,6 +36,7 @@ export function filtersFromParams(params: URLSearchParams): SearchFilters {
 /** Filters to URL, leaving out every filter that is not set so the default search has a clean URL. */
 export function filtersToParams(filters: SearchFilters): URLSearchParams {
   const params = new URLSearchParams();
+  if (filters.q) params.set('q', filters.q);
   if (filters.areaId) params.set('areaId', filters.areaId);
   if (filters.categoryId) params.set('categoryId', filters.categoryId);
   if (filters.maxRent) params.set('maxRent', String(filters.maxRent));

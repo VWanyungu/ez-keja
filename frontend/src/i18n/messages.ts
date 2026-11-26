@@ -64,6 +64,9 @@ export const en = {
   'page.next': 'Next page',
   'page.goTo': 'Page {page}',
   'quick.label': 'Quick filters',
+  'search.label': 'Search buildings',
+  'search.placeholder': 'Search by area or building name in Ngong',
+  'search.submit': 'Search',
 
   // Building card
   'card.verified': 'Verified building',
@@ -164,6 +167,9 @@ export const sw: Partial<Record<MessageKey, string>> = {
   'page.next': 'Ukurasa unaofuata',
   'page.goTo': 'Ukurasa wa {page}',
   'quick.label': 'Vichujio vya haraka',
+  'search.label': 'Tafuta majengo',
+  'search.placeholder': 'Tafuta kwa eneo au jina la jengo Ngong',
+  'search.submit': 'Tafuta',
 
   'card.verified': 'Jengo lililothibitishwa',
   'card.outdated': 'Upatikanaji unaweza kuwa umepitwa na wakati',

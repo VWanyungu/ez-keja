@@ -13,6 +13,12 @@ describe('filtersFromParams', () => {
     });
   });
 
+  it('reads the text query trimmed and capped at the length the API accepts', () => {
+    expect(filtersFromParams(new URLSearchParams({ q: '  Ngong Hills ' }))).toEqual({ q: 'Ngong Hills' });
+    expect(filtersFromParams(new URLSearchParams({ q: 'x'.repeat(150) })).q).toHaveLength(100);
+    expect(filtersFromParams(new URLSearchParams({ q: '   ' }))).toEqual({});
+  });
+
   it('drops values that do not parse', () => {
     const params = new URLSearchParams('maxRent=lots&management=squatter&verifiedOnly=yes&areaId=');
     expect(filtersFromParams(params)).toEqual({});
@@ -27,6 +33,10 @@ describe('filtersFromParams', () => {
 describe('toApiQuery', () => {
   it('asks for a page and carries the cursor', () => {
     expect(toApiQuery({}, { limit: 8, cursor: 'abc' })).toBe('limit=8&cursor=abc');
+  });
+
+  it('sends the text query as q', () => {
+    expect(new URLSearchParams(toApiQuery({ q: 'zebra court' }, { limit: 9 })).get('q')).toBe('zebra court');
   });
 
   it('turns max rent into a currency-scoped rentMax', () => {

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BuildingCard } from '@/components/buildings/BuildingCard';
 import { ActiveFilters } from '@/components/search/ActiveFilters';
+import { SearchBar } from '@/components/search/SearchBar';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
@@ -48,7 +49,10 @@ export default function SearchPage() {
   return (
     <div className="px-4 pb-16 pt-[132px] md:px-10 lg:px-20">
       <div className="mx-auto flex max-w-[1280px] flex-col gap-8">
-        <SearchPanel expandable values={filters} onChange={setFilters} areas={areas} categories={categories} />
+        <div className="flex flex-col gap-4">
+          <SearchBar values={filters} onChange={setFilters} />
+          <SearchPanel expandable values={filters} onChange={setFilters} areas={areas} categories={categories} />
+        </div>
 
         <section ref={resultsRef} className="flex scroll-mt-28 flex-col gap-5" aria-live="polite">
           {search.isPending ? (

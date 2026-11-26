@@ -29,7 +29,7 @@ export function QuickFilters({ values, onChange, categories }: QuickFiltersProps
               onClick={() => onChange({ ...values, categoryId: selected ? undefined : category.id })}
               className={cn(
                 'rounded-lg border px-3.5 py-1.5 text-[13px] font-medium leading-5 transition-colors duration-300 ease-fluid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                selected ? 'border-primary bg-accent text-accent-foreground' : 'border-border bg-card hover:bg-muted',
+                selected ? 'border-primary bg-accent text-accent-foreground' : 'border-line bg-card hover:bg-muted',
               )}
             >
               {label ? t(label) : categoryName(category, language)}
