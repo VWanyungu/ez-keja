@@ -6,19 +6,14 @@ import morgan from 'morgan';
 import checkVersion from './middlewares/version.js';
 import { auth } from './v1/lib/auth.js';
 import { HttpError } from './v1/lib/http-error.js';
+import { parseTrustProxy, resolveCorsOrigin } from './v1/lib/http-config.js';
 import healthRoutes from './v1/modules/health/routes.js';
-
-function resolveCorsOrigin(): boolean | string[] {
-  const raw = process.env.CORS_ORIGIN;
-  if (!raw || raw.trim() === '*') return true;
-  return raw
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-}
 
 export function createApp(): Express {
   const app = express();
+
+  // Off unless TRUST_PROXY is set (e.g. 1 behind nginx/DirectAdmin), so req.ip is the real client.
+  app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
 
   app.use(helmet());
   app.use(cors({ origin: resolveCorsOrigin(), credentials: true }));

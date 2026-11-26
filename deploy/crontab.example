@@ -1,0 +1,50 @@
+# khunt cron schedule. Install with `crontab -e` as the user that owns the app (not root), after
+# replacing KHUNT_DIR. Written for a server whose clock is in Africa/Nairobi (EAT, UTC+3, no daylight
+# saving). If the server runs UTC, add 21 hours or use CRON_TZ=Africa/Nairobi on a cron that supports it
+# (cronie does; check `man 5 crontab`). Every time below is Nairobi local time.
+#
+# Why cron and not the API process: the jobs are separate short-lived processes (design section 10.2),
+# so a slow job never takes a request handler down, and the API can be restarted without touching them.
+#
+# Locking: run-job.sh takes a per-job flock so a run never overlaps the previous one on this host.
+# On top of that every job is idempotent in the database, so a second server or a manual re-run is
+# also safe. Per job:
+#   deliver-notifications  rows are claimed with FOR UPDATE SKIP LOCKED plus a lease; a crashed run's
+#                          rows become claimable again (at-least-once, idempotency key limits repeats).
+#   send-reminders         unique reminder_log key + SKIP LOCKED + ON CONFLICT DO NOTHING: one reminder
+#                          per space type and cycle, however many runs.
+#   expire-viewings        one compare-and-swap UPDATE on status = 'requested': a second run finds nothing.
+#   purge-files            Cloudinary "not found" counts as success and each database step re-checks its row.
+#   purge-expired-auth     only deletes rows already past their expiry.
+#   snapshot-metrics       ON CONFLICT DO NOTHING on the weekly unique key plus an advisory lock.
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin:/home/khunt/.bun/bin
+NODE_ENV=production
+KHUNT_DIR=/home/khunt/khunt
+KHUNT_LOG_DIR=/home/khunt/logs
+
+# Every minute: email the pending notifications (Gmail in staging, Usesendy in production).
+* * * * *   $KHUNT_DIR/deploy/run-job.sh deliver-notifications
+
+# Daily 08:00: one combined reminder to maintainers whose space types have gone stale (BR-010).
+0 8 * * *   $KHUNT_DIR/deploy/run-job.sh send-reminders
+
+# Daily 00:30: cancel viewing requests nobody answered before their time passed.
+30 0 * * *  $KHUNT_DIR/deploy/run-job.sh expire-viewings
+
+# Nightly 02:00: remove Cloudinary assets that nothing needs any more.
+0 2 * * *   $KHUNT_DIR/deploy/run-job.sh purge-files
+
+# Nightly 02:30: delete expired sessions, verification tokens and old refresh tokens.
+30 2 * * *  $KHUNT_DIR/deploy/run-job.sh purge-expired-auth
+
+# Monday 03:30 (= Monday 00:30 UTC, the start of the UTC week the job snapshots): weekly metric snapshots.
+30 3 * * 1  $KHUNT_DIR/deploy/run-job.sh snapshot-metrics
+
+# Nightly 01:00: encrypted database backup with pruning. Needs PGHOST, PGUSER, PGDATABASE and
+# PGPASSFILE (or BACKUP_ENV_FILE) set up as described in backend/README.md; GPG_RECIPIENT for encryption.
+0 1 * * *   BACKUP_ENV_FILE=/home/khunt/backup.env $KHUNT_DIR/deploy/backup.sh >>$KHUNT_LOG_DIR/backup.log 2>&1
+
+# Every 5 minutes: restart the API if PM2 or /health says it is down (the tech-stack "cron health check").
+*/5 * * * * $KHUNT_DIR/deploy/pm2-healthcheck.sh >>$KHUNT_LOG_DIR/healthcheck.log 2>&1

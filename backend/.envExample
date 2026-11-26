@@ -1,15 +1,47 @@
+# development | staging | production. In staging and production the API refuses to start unless the
+# variables for that environment are set (see backend/README.md "Configuration"): it lists the missing NAMES.
 NODE_ENV=
 PORT=
+# Comma-separated explicit origins, e.g. https://khunt.example.com. Required in staging/production
+# and "*" is refused there; in development an unset value or "*" allows any origin.
 CORS_ORIGIN=
 FRONTEND_URL=
 BETTER_AUTH_URL=
+# AUTH_SECRET is accepted in place of BETTER_AUTH_SECRET. Required in staging and production.
 BETTER_AUTH_SECRET=
+AUTH_SECRET=
 ACCESS_TOKEN_TTL_SECONDS=
 REFRESH_TOKEN_TTL_DAYS=
+
+# Reverse proxy (DirectAdmin/nginx in front of the app): number of proxy hops whose X-Forwarded-For
+# is trusted, e.g. 1. Unset/0 = trust none (req.ip is the socket address). "true" is refused.
+TRUST_PROXY=
+# Milliseconds in-flight requests get to finish on SIGTERM/SIGINT before they are cut (default 10000).
+# Keep it below `kill_timeout` in deploy/ecosystem.config.cjs.
+SHUTDOWN_TIMEOUT_MS=
+
+# Rate limiting (in-process, per client IP and route group). On in staging/production, off in
+# development and tests; RATE_LIMIT_ENABLED=1 or 0 overrides. Limits are requests per window.
+# Defaults: strict 20 per 900 s (login, register, password reset, refresh, invites),
+# moderate 60 per 60 s (contact events, commute, uploads), generous 300 per 60 s (search, public pages).
+RATE_LIMIT_ENABLED=
+RATE_LIMIT_STRICT_MAX=
+RATE_LIMIT_STRICT_WINDOW_SECONDS=
+RATE_LIMIT_MODERATE_MAX=
+RATE_LIMIT_MODERATE_WINDOW_SECONDS=
+RATE_LIMIT_GENEROUS_MAX=
+RATE_LIMIT_GENEROUS_WINDOW_SECONDS=
+
+# Mail: staging uses Gmail (GMAIL_USER + GMAIL_APP_PASSWORD), production uses Usesendy
+# (USESENDY_API_KEY + MAIL_FROM). USESENDY_API_URL overrides the default endpoint.
 USESENDY_API_KEY=
+USESENDY_API_URL=
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
 MAIL_FROM=
+# Test runs blank the three credentials above. Set to 1 ONLY to send real mail from a test run, and
+# only to a valid address from v1/lib/mail-test-address.ts.
+INTEGRATION_SEND_MAIL=
 
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
