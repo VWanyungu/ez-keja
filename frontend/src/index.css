@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens from the Figma "Foundations & Components" page, as HSL triplets. */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 204 9% 11%; /* ink/900 */
+    --card: 0 0% 100%;
+    --muted: 220 14% 96%; /* surface/100 */
+    --muted-foreground: 198 8% 41%; /* ink/500 */
+    --subtle-foreground: 198 5% 62%; /* ink/400 */
+    --border: 220 13% 91%; /* border/default */
+    --input: 220 13% 91%;
+    --ring: 172 69% 28%;
+    --primary: 172 69% 28%; /* teal/600 */
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 172 72% 21%; /* teal/700 */
+    --accent: 171 39% 94%; /* teal/50 */
+    --accent-foreground: 172 72% 21%;
+    --tint: 173 38% 87%; /* teal/100 */
+    --warning: 45 80% 92%; /* amber/50 */
+    --warning-foreground: 40 100% 29%; /* amber/700 */
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-sans text-[15px] leading-6 text-foreground antialiased;
+  }
+}
