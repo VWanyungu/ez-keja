@@ -67,6 +67,8 @@ describe('createCloudinaryClient', () => {
     expect(form.get('type')).toBe('upload');
     expect(form.get('public_id')).toBe('khunt/test/photos/abc');
     expect(form.get('file')).toBeInstanceOf(Blob);
+    // An empty filename makes Cloudinary answer "Missing required parameter - file".
+    expect((form.get('file') as File).name).toBe('a.jpg');
     // The signature covers exactly the signed params, never the file or api_key.
     const timestamp = Number(form.get('timestamp'));
     expect(form.get('signature')).toBe(

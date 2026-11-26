@@ -1,0 +1,198 @@
+export type Language = 'en' | 'sw';
+
+export const LANGUAGES: readonly Language[] = ['en', 'sw'];
+
+/** English is the source of truth: its keys define every message the UI can show. */
+export const en = {
+  // Header
+  'nav.forRenters': 'For renters',
+  'nav.forListers': 'For listers',
+  'nav.main': 'Main',
+  'nav.findRental': 'Find a rental',
+  'nav.commercial': 'Commercial',
+  'nav.services': 'Services',
+  'nav.howItWorks': 'How it works',
+  'nav.login': 'Log in',
+  'nav.register': 'Register',
+  'language.label': 'Language',
+  'theme.toDark': 'Switch to dark theme',
+  'theme.toLight': 'Switch to light theme',
+
+  // Home
+  'hero.title': 'House hunting in Ngong just got a lot easier',
+  'hero.body': 'Pick the house type you want, see which buildings in Ngong still have it vacant, and compare each type’s photos and price.',
+  'hero.cta': 'Explore rentals',
+  'home.seeMore': 'See more',
+  'home.emptyTitle': 'No vacancies yet',
+  'home.emptyBody': 'Buildings appear here as soon as their managers publish them.',
+
+  // Search fields
+  'field.area': 'Area',
+  'field.houseType': 'House type',
+  'field.bedrooms': 'Bedrooms',
+  'field.maxRent': 'Max rent (KES)',
+  'option.anyArea': 'Ngong, any area',
+  'option.anyType': 'Any type',
+  'option.any': 'Any',
+  'option.noLimit': 'No limit',
+  'bed.bedsitter': 'Bedsitter',
+  'bed.one': '1 bedroom',
+  'bed.two': '2 bedrooms',
+  'bed.three': '3+ bedrooms',
+
+  // More filters and active filters
+  'more.toggle': 'More filters',
+  'more.managedBy': 'Managed by',
+  'more.agent': 'Agent',
+  'more.landlord': 'Landlord',
+  'more.trust': 'Trust',
+  'more.verified': 'Verified listers only',
+  'active.label': 'Active filters',
+  'active.under': 'Under {amount}',
+  'active.agents': 'Managed by agents',
+  'active.landlords': 'Managed by landlords',
+  'active.remove': 'Remove filter: {label}',
+
+  // Results
+  'results.showingOne': 'Showing 1 building',
+  'results.showingMany': 'Showing {count} buildings',
+  'results.showingManySoFar': 'Showing {count} buildings so far',
+  'results.emptyTitle': 'No buildings match these filters',
+  'results.emptyBody': 'Try a different area or house type, or raise the maximum rent.',
+  'results.clear': 'Clear filters',
+  'results.loadMore': 'Load more',
+  'results.loading': 'Loading…',
+
+  // Building card
+  'card.verified': 'Verified building',
+  'card.outdated': 'Availability may be outdated',
+  'card.perMonth': '/ mo',
+  'card.rentOnInterest': 'Rent on interest',
+  'card.coverAlt': '{name}, cover photo',
+
+  // States
+  'common.loading': 'Loading',
+  'error.title': 'We couldn’t load this',
+  'error.default': 'Something went wrong. Please try again.',
+  'error.retry': 'Try again',
+  'error.boundary': 'Something went wrong. Please refresh.',
+  'notFound.title': 'Page not found',
+  'notFound.body': 'This page does not exist yet, or the link is wrong.',
+  'notFound.back': 'Back to home',
+
+  // Footer
+  'footer.ctaLead': 'Let’s find your next ',
+  'footer.ctaBold': 'home',
+  'footer.ctaTail': '',
+  'footer.browse': 'Browse rentals',
+  'footer.list': 'List a unit',
+  'footer.commercialUnits': 'Commercial units',
+  'footer.servicesDirectory': 'Services directory',
+  'footer.savedListings': 'Saved listings',
+  'footer.verification': 'Verification',
+  'footer.updateReminders': 'Update reminders',
+  'footer.agentProfiles': 'Agent profiles',
+  'footer.company': 'Company',
+  'footer.about': 'About',
+  'footer.contact': 'Contact',
+  'footer.terms': 'Terms of Use',
+  'footer.privacy': 'Privacy Policy',
+  'footer.cookies': 'Cookies',
+} as const;
+
+export type MessageKey = keyof typeof en;
+
+/**
+ * Kiswahili. First-draft translations: have a Kiswahili speaker confirm them (the same caveat as the
+ * space category labels in the seed). A key left out falls back to English (FR-LOC-001).
+ */
+export const sw: Partial<Record<MessageKey, string>> = {
+  'nav.forRenters': 'Kwa wapangaji',
+  'nav.forListers': 'Kwa wapangishaji',
+  'nav.main': 'Kuu',
+  'nav.findRental': 'Tafuta nyumba ya kupanga',
+  'nav.commercial': 'Biashara',
+  'nav.services': 'Huduma',
+  'nav.howItWorks': 'Jinsi inavyofanya kazi',
+  'nav.login': 'Ingia',
+  'nav.register': 'Jisajili',
+  'language.label': 'Lugha',
+  'theme.toDark': 'Badili hadi hali ya giza',
+  'theme.toLight': 'Badili hadi hali ya mwanga',
+
+  'hero.title': 'Kutafuta nyumba Ngong sasa ni rahisi zaidi',
+  'hero.body': 'Chagua aina ya nyumba unayotaka, ona majengo ya Ngong yenye nafasi wazi, na ulinganishe picha na bei ya kila aina.',
+  'hero.cta': 'Gundua nyumba za kupanga',
+  'home.seeMore': 'Ona zaidi',
+  'home.emptyTitle': 'Hakuna nafasi wazi bado',
+  'home.emptyBody': 'Majengo yataonekana hapa mara tu wasimamizi wake wanapoyachapisha.',
+
+  'field.area': 'Eneo',
+  'field.houseType': 'Aina ya nyumba',
+  'field.bedrooms': 'Vyumba vya kulala',
+  'field.maxRent': 'Kodi ya juu (KES)',
+  'option.anyArea': 'Ngong, eneo lolote',
+  'option.anyType': 'Aina yoyote',
+  'option.any': 'Yoyote',
+  'option.noLimit': 'Bila kikomo',
+  'bed.bedsitter': 'Bedsitter',
+  'bed.one': 'Chumba 1',
+  'bed.two': 'Vyumba 2',
+  'bed.three': 'Vyumba 3+',
+
+  'more.toggle': 'Vichujio zaidi',
+  'more.managedBy': 'Inasimamiwa na',
+  'more.agent': 'Wakala',
+  'more.landlord': 'Mwenye nyumba',
+  'more.trust': 'Uaminifu',
+  'more.verified': 'Waliothibitishwa pekee',
+  'active.label': 'Vichujio vilivyotumika',
+  'active.under': 'Chini ya {amount}',
+  'active.agents': 'Inasimamiwa na mawakala',
+  'active.landlords': 'Inasimamiwa na wenye nyumba',
+  'active.remove': 'Ondoa kichujio: {label}',
+
+  'results.showingOne': 'Inaonyesha jengo 1',
+  'results.showingMany': 'Inaonyesha majengo {count}',
+  'results.showingManySoFar': 'Inaonyesha majengo {count} hadi sasa',
+  'results.emptyTitle': 'Hakuna majengo yanayolingana na vichujio hivi',
+  'results.emptyBody': 'Jaribu eneo au aina nyingine ya nyumba, au ongeza kodi ya juu.',
+  'results.clear': 'Futa vichujio',
+  'results.loadMore': 'Pakia zaidi',
+  'results.loading': 'Inapakia…',
+
+  'card.verified': 'Jengo lililothibitishwa',
+  'card.outdated': 'Upatikanaji unaweza kuwa umepitwa na wakati',
+  'card.perMonth': '/ mwezi',
+  'card.rentOnInterest': 'Uliza kuhusu kodi',
+  'card.coverAlt': '{name}, picha ya jalada',
+
+  'common.loading': 'Inapakia',
+  'error.title': 'Hatukuweza kupakia hili',
+  'error.default': 'Kuna tatizo. Tafadhali jaribu tena.',
+  'error.retry': 'Jaribu tena',
+  'error.boundary': 'Kuna tatizo. Tafadhali onyesha upya ukurasa.',
+  'notFound.title': 'Ukurasa haupatikani',
+  'notFound.body': 'Ukurasa huu bado haupo, au kiungo si sahihi.',
+  'notFound.back': 'Rudi mwanzo',
+
+  'footer.ctaLead': 'Tutafute ',
+  'footer.ctaBold': 'nyumba',
+  'footer.ctaTail': ' yako ijayo',
+  'footer.browse': 'Tazama nyumba',
+  'footer.list': 'Weka nyumba yako',
+  'footer.commercialUnits': 'Nafasi za biashara',
+  'footer.servicesDirectory': 'Orodha ya huduma',
+  'footer.savedListings': 'Nyumba zilizohifadhiwa',
+  'footer.verification': 'Uthibitisho',
+  'footer.updateReminders': 'Vikumbusho vya masasisho',
+  'footer.agentProfiles': 'Wasifu wa mawakala',
+  'footer.company': 'Kampuni',
+  'footer.about': 'Kuhusu',
+  'footer.contact': 'Wasiliana nasi',
+  'footer.terms': 'Masharti ya Matumizi',
+  'footer.privacy': 'Sera ya Faragha',
+  'footer.cookies': 'Vidakuzi',
+};
+
+export const messages: Record<Language, Partial<Record<MessageKey, string>>> = { en, sw };

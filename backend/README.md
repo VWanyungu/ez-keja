@@ -15,6 +15,7 @@ bun install
 cp .envExample .env      # then fill it in; .env is gitignored, never commit it
 bun run migrate          # creates the schema (needs a PostgreSQL user that owns the database)
 bun run seed             # reference data (and, in development only, a dev Admin)
+bun run seed:dev-catalogue  # development only: sample listers, areas and 8 published buildings, photos uploaded to Cloudinary (needs its credentials; every @khunt.local user has the password "password")
 bun run dev              # http://localhost:3000, /health answers without the api-v header
 ```
 

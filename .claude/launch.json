@@ -12,7 +12,7 @@
       "name": "backend-dev",
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "--cwd", "backend", "dev"],
-      "port": 3000
+      "port": 3012
     }
   ]
 }
