@@ -1103,6 +1103,8 @@ Indexes: `ix_notif_user_time` `(user_id, created_at DESC)`; `ix_notif_unread` `(
 Constraints: `ux_deliveries_channel` `UNIQUE (notification_id, channel)`.
 Indexes: `ix_deliveries_work` `(COALESCE(next_attempt_at, created_at)) WHERE status IN ('pending','failed')` (worker queue; use `FOR UPDATE SKIP LOCKED`). "No channel deliverable" (FR-AVL-006) = the notification has no delivery row, or every delivery is `failed` or `abandoned`; surfaced in the follow-up queue by query.
 
+*As built (Phase 9, no schema change; `modules/notifications/deliver.ts`).* The worker claims rows with one `UPDATE ... FROM (SELECT ... FOR UPDATE SKIP LOCKED)` that adds 1 to `attempts` and moves `next_attempt_at` 5 minutes ahead (a lease), so no lock is held during the mail call, two runs or two PM2 instances never take the same row, and a crashed run is retried after the lease. On success: `sent`, `sent_at`. On failure: `failed` with backoff (1 min, 5 min, 30 min, 2 h), and `abandoned` at the 5th attempt (`MAX_ATTEMPTS`). A recipient with no deliverable address (`erased_at` set, or an `@invalid` placeholder) is `abandoned` straight away with `last_error = 'no_deliverable_email'`. `last_error` only ever holds a short code (`send_failed`, `send_failed:<code>`, `mail_not_configured`, `no_deliverable_email`), never a provider message, so it cannot hold an address; §10.6 step 7 still blanks it. N-11 is written once per threshold per UTC day by checking `payload->>'dedupeKey'` under an advisory lock (`notifyAdminsOnce`), which needs no extra column.
+
 ### 5.6 Advertising [REQ §6.11; Release 2, OQ-30]
 
 These tables can ship in Release 2 without touching Release 1 tables. [REC] Create them in a separate later migration.

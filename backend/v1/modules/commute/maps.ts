@@ -153,11 +153,14 @@ export class DailyQuota {
   private used = 0;
   private warned = false;
   private exhausted = false;
+  private reachedLimit = false;
 
   constructor(
     private readonly limit: () => number,
     private readonly now: () => number,
     private readonly log: { warn: (m: string) => void; error: (m: string) => void },
+    /** N-11: called once per UTC day when usage first reaches 80%, and once when it reaches 100%. Must not throw. */
+    private readonly onThreshold?: (threshold: 80 | 100, used: number, limit: number) => void,
   ) {}
 
   /** Reserves `calls` Google calls, or refuses the whole batch when it would pass the limit. */
@@ -168,6 +171,7 @@ export class DailyQuota {
       this.used = 0;
       this.warned = false;
       this.exhausted = false;
+      this.reachedLimit = false;
     }
     const limit = this.limit();
     if (this.used + calls > limit) {
@@ -175,13 +179,22 @@ export class DailyQuota {
         this.exhausted = true;
         this.log.error(`[maps] daily limit of ${limit} calls reached: commute answers "unavailable" until 00:00 UTC`);
       }
+      this.notifyLimit(limit);
       return false;
     }
     this.used += calls;
     if (!this.warned && this.used >= limit * 0.8) {
       this.warned = true;
       this.log.warn(`[maps] daily usage at ${this.used} of ${limit} calls (80% reached)`);
+      this.onThreshold?.(80, this.used, limit);
     }
+    if (this.used >= limit) this.notifyLimit(limit);
     return true;
+  }
+
+  private notifyLimit(limit: number): void {
+    if (this.reachedLimit) return;
+    this.reachedLimit = true;
+    this.onThreshold?.(100, this.used, limit);
   }
 }

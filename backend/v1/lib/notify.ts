@@ -59,6 +59,35 @@ export async function adminRecipients(trx: Knex.Transaction): Promise<string[]> 
   return rows.map((r) => r.user_id);
 }
 
+/** SRS §10.2 event codes written by Phase 9. */
+export const EVENT_NEW_ENQUIRY_MESSAGE = 'N-05';
+export const EVENT_ENQUIRY_REPLY = 'N-06';
+export const EVENT_VIEWING = 'N-07';
+export const EVENT_SPACE_TYPE_UNAVAILABLE = 'N-08';
+export const EVENT_REPORT_RECEIVED = 'N-09';
+export const EVENT_MAPS_USAGE = 'N-11';
+
+/**
+ * Tells every active Admin about `eventCode` at most once per `dedupeKey` (for N-11: threshold and
+ * UTC day). The key is stored in the payload, so no schema change is needed; a transaction-scoped
+ * advisory lock makes the check-then-insert safe across PM2 instances. Returns the number of rows
+ * written (0 when this key was already announced).
+ */
+export async function notifyAdminsOnce(
+  trx: Knex.Transaction,
+  eventCode: string,
+  dedupeKey: string,
+  payload: Record<string, unknown>,
+): Promise<number> {
+  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`notify-once:${eventCode}`]);
+  const seen = await trx('notifications')
+    .where({ event_code: eventCode })
+    .whereRaw("payload->>'dedupeKey' = ?", [dedupeKey])
+    .first('id');
+  if (seen) return 0;
+  return notifyEach(trx, await adminRecipients(trx), eventCode, { ...payload, dedupeKey });
+}
+
 /** Same notification to several users, each at most once. */
 export const notifyEach = (
   trx: Knex.Transaction,
