@@ -170,6 +170,42 @@ const TEMPLATES: Record<string, Template> = {
     return { title: lang === 'sw' ? `Ripoti kuhusu ${target}` : `Report about ${target}`, body: `${target} ${reason}.` };
   },
 
+  // N-10: moderation by an Admin (FR-ADM-003): suspension, reinstatement or photo removal (Phase 10).
+  // payload: { subject: 'account' | 'building' | 'photo', action: 'suspended' | 'reinstated' | 'removed',
+  //            buildingName?, reason?, buildingsAffected?, buildingsRestored? }
+  'N-10': (p, lang) => {
+    const subject = p.subject === 'building' || p.subject === 'photo' ? p.subject : 'account';
+    const reinstated = p.action === 'reinstated';
+    const b = building(p, lang);
+    const count = (v: unknown): number => (typeof v === 'number' && v > 0 ? v : 0);
+    const affected = count(p.buildingsAffected);
+    const restored = count(p.buildingsRestored);
+    let title: string;
+    let extra = '';
+    if (lang === 'sw') {
+      title =
+        subject === 'photo'
+          ? `Picha ya ${b} imeondolewa`
+          : subject === 'building'
+            ? reinstated ? `${b} imerejeshwa` : `${b} imesimamishwa`
+            : reinstated ? 'Akaunti yako imerejeshwa' : 'Akaunti yako imesimamishwa';
+      if (subject === 'account' && affected) {
+        extra = affected === 1 ? ' Jengo 1 unalolisimamia pia limesimamishwa.' : ` Majengo ${affected} unayoyasimamia pia yamesimamishwa.`;
+      }
+      if (subject === 'account' && restored) extra = restored === 1 ? ' Jengo 1 limerejeshwa.' : ` Majengo ${restored} yamerejeshwa.`;
+    } else {
+      title =
+        subject === 'photo'
+          ? `A photo of ${b} was removed`
+          : subject === 'building'
+            ? reinstated ? `${b} has been reinstated` : `${b} has been suspended`
+            : reinstated ? 'Your account has been reinstated' : 'Your account has been suspended';
+      if (subject === 'account' && affected) extra = ` ${affected} building${affected === 1 ? '' : 's'} you maintain ${affected === 1 ? 'was' : 'were'} also suspended.`;
+      if (subject === 'account' && restored) extra = ` ${restored} building${restored === 1 ? ' was' : 's were'} restored.`;
+    }
+    return { title, body: `${title}.${extra}${reinstated ? '' : reasonLine(p, lang)}` };
+  },
+
   // N-11: Maps quota (Admin).
   'N-11': (p, lang) => {
     const over = p.threshold === 100;

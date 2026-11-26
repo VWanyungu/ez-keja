@@ -65,6 +65,8 @@ export const EVENT_ENQUIRY_REPLY = 'N-06';
 export const EVENT_VIEWING = 'N-07';
 export const EVENT_SPACE_TYPE_UNAVAILABLE = 'N-08';
 export const EVENT_REPORT_RECEIVED = 'N-09';
+/** N-10 (FR-ADM-003): suspension, reinstatement or photo removal, sent to the affected user. */
+export const EVENT_MODERATION = 'N-10';
 export const EVENT_MAPS_USAGE = 'N-11';
 
 /**
