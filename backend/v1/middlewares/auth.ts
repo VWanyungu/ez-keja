@@ -62,7 +62,13 @@ declare module 'express-serve-static-core' {
 
 export interface RequireSessionOptions {
   allowPendingConsent?: boolean;
+  /** Public routes: no credentials at all means Guest (`req.auth` stays unset) instead of a 401. */
+  optional?: boolean;
 }
+
+/** Better Auth names its cookie `[__Secure-]better-auth.session_token`; any cookie of that kind counts as credentials. */
+const hasSessionCookie = (headers: IncomingHttpHeaders): boolean =>
+  typeof headers.cookie === 'string' && /session_token=/.test(headers.cookie);
 
 export interface AuthAccountSnapshot {
   profile: AuthProfile | null;
@@ -273,6 +279,10 @@ export function createRequireSession(
     } else {
       const sessionData = await resolveSession(req.headers);
       if (!sessionData) {
+        if (options.optional && !hasSessionCookie(req.headers)) {
+          next(); // Guest
+          return;
+        }
         next(unauthorized('Authentication required', { code: 'UNAUTHORIZED' }));
         return;
       }
@@ -343,6 +353,17 @@ export function createRequireSession(
 
 export const requireSession = (options: RequireSessionOptions = {}): RequestHandler =>
   createRequireSession(options);
+
+/**
+ * Public routes (search, building pages, lister profiles): a Guest passes with `req.auth` unset, so
+ * a handler tells the two apart with `req.auth`. Credentials that are present but bad (invalid or
+ * expired token, revoked session, suspended or erased account, consent owed) answer exactly as
+ * `requireSession` does: never silently downgraded to Guest.
+ */
+export const createOptionalSession = (deps: SessionMiddlewareDeps = {}): RequestHandler =>
+  createRequireSession({ optional: true }, deps);
+
+export const optionalSession = (): RequestHandler => createOptionalSession();
 
 export function requireRole(...allowedRoles: UserRole[]): RequestHandler {
   return (req, _res, next) => {
