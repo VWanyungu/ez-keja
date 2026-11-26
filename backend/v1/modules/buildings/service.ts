@@ -24,6 +24,7 @@ import { badRequest, conflict, forbidden, notFound } from '../../lib/http-error.
 import { loadBuildingAccess } from '../../lib/maintainer.js';
 import type { AuthContext, UserRole } from '../../middlewares/auth.js';
 import { listSpaceTypeRows, type SpaceTypeItem } from '../space-types/service.js';
+import { recordBuildingReopened } from '../verification/service.js';
 import {
   assertManagement,
   canTransition,
@@ -436,7 +437,22 @@ export async function updateBuilding(
       buildingId: id,
       changes,
     });
-    return toBuildingItem(updated[0]!);
+
+    // FR-VER-007: T6 (an AFTER trigger, so RETURNING above cannot show it) sends a Verified building
+    // back to Pending when its area or pin moves. Re-read it, then tell maintainers and Admins.
+    const after = await loadBuilding(trx, id);
+    if (before.verificationStatus === 'verified' && after.verificationStatus !== 'verified') {
+      await recordBuildingReopened(trx, {
+        buildingId: id,
+        actorUserId: auth.user.id,
+        actorType: actorTypeOf(access),
+        changed: [
+          ...('areaId' in changes.after ? ['area'] : []),
+          ...('latitude' in changes.after || 'longitude' in changes.after ? ['pin'] : []),
+        ],
+      });
+    }
+    return after;
   });
 }
 

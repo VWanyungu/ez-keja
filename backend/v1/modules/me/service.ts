@@ -10,6 +10,7 @@ import type {
   UserRole,
   VerificationStatus,
 } from '../../middlewares/auth.js';
+import { recordAccountReopened } from '../verification/service.js';
 import type { PatchMeInput } from './schemas.js';
 
 export interface MePayload {
@@ -178,13 +179,21 @@ export async function updateMe(
           })
           .update({ status: 'superseded' });
 
-        await trx('verification_cases').insert({
-          id: generateUuidV7(),
-          subject_type: 'account',
-          subject_user_id: userId,
-          origin: 'material_change',
-          status: 'pending',
-          submitted_at: trx.raw('clock_timestamp()'),
+        const [reopened] = (await trx('verification_cases')
+          .insert({
+            id: generateUuidV7(),
+            subject_type: 'account',
+            subject_user_id: userId,
+            origin: 'material_change',
+            status: 'pending',
+            submitted_at: trx.raw('clock_timestamp()'),
+          })
+          .returning('id')) as Array<{ id: string }>;
+        // N-03 to every Admin, plus the audit row (FR-VER-007).
+        await recordAccountReopened(trx, {
+          userId,
+          caseId: reopened!.id,
+          changed: ['display_name', 'phone'].filter((field) => field in updates),
         });
       }
 
