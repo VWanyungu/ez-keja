@@ -64,7 +64,7 @@ export function createCloudinaryClient(
 ): CloudinaryClient {
   const nowSeconds = () => Math.floor(Date.now() / 1000);
 
-  async function post(resourceType: ResourceType, action: string, fields: Params, file?: Blob) {
+  async function post(resourceType: ResourceType, action: string, fields: Params, file?: Blob, filename = 'upload') {
     const signed = { ...fields, timestamp: nowSeconds() };
     const form = new FormData();
     for (const [key, value] of Object.entries(signed)) {
@@ -72,7 +72,8 @@ export function createCloudinaryClient(
     }
     form.append('api_key', config.apiKey);
     form.append('signature', signParams(signed, config.apiSecret));
-    if (file) form.append('file', file);
+    // Without a filename Bun sends `filename=""`, which Cloudinary reads as "no file" ("Missing required parameter - file").
+    if (file) form.append('file', file, filename);
 
     let res: Response;
     try {
@@ -99,6 +100,7 @@ export function createCloudinaryClient(
         'upload',
         { public_id: input.publicId, type: input.deliveryType },
         new Blob([new Uint8Array(input.buffer)], { type: input.mimeType }),
+        input.filename,
       );
 
       // Defence in depth: a restricted file must never come back as publicly deliverable.
