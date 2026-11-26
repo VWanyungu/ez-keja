@@ -1,4 +1,10 @@
+import type { Language } from '@/i18n/messages';
+import type { SpaceCategory } from '@/types/reference';
 import type { BuildingCard } from '@/types/search';
+
+/** The API carries both names, so categories switch language with the UI. */
+export const categoryName = (category: SpaceCategory, language: Language) =>
+  language === 'sw' ? category.nameSw : category.nameEn;
 
 const MS_PER_DAY = 86_400_000;
 const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });

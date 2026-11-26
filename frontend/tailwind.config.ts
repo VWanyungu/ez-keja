@@ -21,11 +21,11 @@ const config: Config = {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
           dark: 'hsl(var(--primary-dark))',
+          bright: 'hsl(var(--primary-bright))',
         },
         accent: { DEFAULT: 'hsl(var(--accent))', foreground: 'hsl(var(--accent-foreground))' },
         tint: 'hsl(var(--tint))',
-        warning: { DEFAULT: 'hsl(var(--warning))', foreground: 'hsl(var(--warning-foreground))' },
-        alert: 'hsl(var(--alert))',
+        orange: 'hsl(var(--orange))',
       },
       // A heavy, spring-like settle: fast off the mark, long soft landing. Used for every transition.
       transitionTimingFunction: { fluid: 'cubic-bezier(0.32, 0.72, 0, 1)' },

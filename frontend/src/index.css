@@ -20,10 +20,10 @@
     --accent: 171 39% 94%; /* teal/50 */
     --accent-foreground: 172 72% 21%;
     --tint: 173 38% 87%; /* teal/100 */
-    --warning: 45 80% 92%; /* amber/50 */
-    --warning-foreground: 40 100% 29%; /* amber/700 */
-    /* Warning glyph drawn straight onto photos, so it stays bright in both themes. */
-    --alert: 43 96% 60%;
+    /* Brand accent: orange, for things that need attention (stale availability). Same in both themes. */
+    --orange: 24 95% 55%;
+    /* A lighter teal for glyphs drawn straight onto photos, so they stay legible. */
+    --primary-bright: 172 55% 56%;
     --radius: 0.75rem;
     color-scheme: light;
   }
@@ -45,8 +45,6 @@
     --accent: 172 28% 15%;
     --accent-foreground: 172 40% 82%;
     --tint: 172 22% 17%;
-    --warning: 40 55% 18%;
-    --warning-foreground: 40 90% 66%;
     color-scheme: dark;
   }
 

@@ -6,13 +6,17 @@
     <meta name="description" content="Find vacant houses and commercial spaces near you, with live availability from the people who manage them." />
     <title>KHunt: find vacant rentals</title>
     <script>
-      // Applies the saved or OS theme before first paint, so dark mode does not flash light.
+      // Applies the saved theme before first paint (dark by default), so it does not flash light.
+      // Keep the default in step with ThemeProvider. Also sets the saved page language.
       try {
+        if (localStorage.getItem('khunt-language') === 'sw') document.documentElement.lang = 'sw';
         var t = localStorage.getItem('khunt-theme');
-        if (t === 'dark' || ((!t || t === 'system') && matchMedia('(prefers-color-scheme: dark)').matches)) {
+        if (!t || t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.classList.add('dark');
         }
-      } catch (e) {}
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

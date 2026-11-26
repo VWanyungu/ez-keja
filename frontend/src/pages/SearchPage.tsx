@@ -8,11 +8,13 @@ import { LoadingState } from '@/components/shared/LoadingState';
 import { Reveal } from '@/components/shared/Reveal';
 import { Button } from '@/components/ui/button';
 import { useBuildingSearch } from '@/hooks/queries/use-building-search';
+import { useLanguage } from '@/hooks/use-language';
 import { useAreas, useCategories } from '@/hooks/queries/use-reference';
 import { filtersFromParams, filtersToParams, PAGE_SIZE } from '@/lib/search-params';
 import type { SearchFilters } from '@/types/search';
 
 export default function SearchPage() {
+  const { t } = useLanguage();
   const [params, setParams] = useSearchParams();
   // The URL is the source of truth, so a search survives a refresh and can be shared.
   const filters = filtersFromParams(params);
@@ -37,18 +39,20 @@ export default function SearchPage() {
             <>
               {buildings.length > 0 && (
                 <p className="text-lg font-medium leading-[26px]">
-                  {`Showing ${buildings.length} building${buildings.length === 1 ? '' : 's'}${search.hasNextPage ? ' so far' : ''}`}
+                  {buildings.length === 1
+                    ? t('results.showingOne')
+                    : t(search.hasNextPage ? 'results.showingManySoFar' : 'results.showingMany', { count: buildings.length })}
                 </p>
               )}
               <ActiveFilters values={filters} onChange={setFilters} areas={areas} categories={categories} />
 
               {buildings.length === 0 ? (
                 <EmptyState
-                  title="No buildings match these filters"
-                  description="Try a different area or house type, or raise the maximum rent."
+                  title={t('results.emptyTitle')}
+                  description={t('results.emptyBody')}
                   action={
                     <Button variant="outline" onClick={() => setFilters({})}>
-                      Clear filters
+                      {t('results.clear')}
                     </Button>
                   }
                 />
@@ -65,7 +69,7 @@ export default function SearchPage() {
               {search.hasNextPage && (
                 <div className="flex justify-center pt-4">
                   <Button variant="outline" disabled={search.isFetchingNextPage} onClick={() => search.fetchNextPage()}>
-                    {search.isFetchingNextPage ? 'Loading…' : 'Load more'}
+                    {search.isFetchingNextPage ? t('results.loading') : t('results.loadMore')}
                   </Button>
                 </div>
               )}

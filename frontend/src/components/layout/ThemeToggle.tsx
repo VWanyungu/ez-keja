@@ -1,3 +1,4 @@
+import { useLanguage } from '@/hooks/use-language';
 import { useTheme } from '@/hooks/use-theme';
 
 // Hairline strokes, matching the light icon weight of the rest of the design.
@@ -16,13 +17,14 @@ const ICON = {
 /** Shows the theme you would switch to: a sun while dark, a moon while light. */
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { t } = useLanguage();
   const toDark = resolvedTheme === 'light';
 
   return (
     <button
       type="button"
       onClick={() => setTheme(toDark ? 'dark' : 'light')}
-      aria-label={toDark ? 'Switch to dark theme' : 'Switch to light theme'}
+      aria-label={t(toDark ? 'theme.toDark' : 'theme.toLight')}
       className="flex size-7 items-center justify-center rounded-full transition-[transform,background-color] duration-500 ease-fluid hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
     >
       {toDark ? (

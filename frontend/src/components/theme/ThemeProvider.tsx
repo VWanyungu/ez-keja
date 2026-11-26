@@ -3,6 +3,8 @@ import { ThemeContext, type Theme } from '@/hooks/use-theme';
 
 // A per-device preference, so localStorage is fine here (never auth data).
 const STORAGE_KEY = 'khunt-theme';
+// Dark until the visitor picks otherwise; keep in step with the script in index.html.
+const DEFAULT_THEME: Theme = 'dark';
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 function readStored(): Theme {
@@ -10,9 +12,9 @@ function readStored(): Theme {
     const value = localStorage.getItem(STORAGE_KEY);
     if (value === 'light' || value === 'dark' || value === 'system') return value;
   } catch {
-    // Storage can be blocked (private mode); the OS setting is the fallback.
+    // Storage can be blocked (private mode); the default applies.
   }
-  return 'system';
+  return DEFAULT_THEME;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

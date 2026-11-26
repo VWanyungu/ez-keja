@@ -26,7 +26,8 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
           observer.disconnect();
         }
       },
-      { rootMargin: '0px 0px -6% 0px' },
+      // No inset: blocks already peeking above the fold animate in at once instead of leaving a blank strip.
+      { threshold: 0.01 },
     );
     observer.observe(el);
     return () => observer.disconnect();
