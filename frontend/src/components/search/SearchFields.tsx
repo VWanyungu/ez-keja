@@ -24,7 +24,7 @@ interface FieldProps {
 function Field({ label, value, onValueChange, children }: FieldProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-5 py-2">
-      <span className="text-[11px] font-semibold uppercase leading-4 tracking-[0.06em] text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium leading-4 text-muted-foreground">{label}</span>
       <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger aria-label={label} className="h-5">
           <SelectValue />
