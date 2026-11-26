@@ -18,6 +18,7 @@ import {
 } from './modules/reference/routes.js';
 import searchRoutes from './modules/search/routes.js';
 import spaceTypesRoutes from './modules/space-types/routes.js';
+import verificationRoutes from './modules/verification/routes.js';
 
 const router = express.Router();
 
@@ -33,6 +34,8 @@ router.use(spaceTypesRoutes);
 // Availability (Phase 6): counts, bulk confirm, history, and the Admin follow-up queue.
 router.use(availabilityRoutes);
 router.use(followUpsRoutes);
+// Verification (Phase 8): applicant submissions and the Admin queue (absolute paths).
+router.use(verificationRoutes);
 // Public side (Phase 7): Guest-friendly via optionalSession. Search, building and space-type pages,
 // tap-to-call events, lister profiles and the commute proxy.
 router.use(searchRoutes);
