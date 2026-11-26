@@ -22,7 +22,32 @@
     --tint: 173 38% 87%; /* teal/100 */
     --warning: 45 80% 92%; /* amber/50 */
     --warning-foreground: 40 100% 29%; /* amber/700 */
+    /* Warning glyph drawn straight onto photos, so it stays bright in both themes. */
+    --alert: 43 96% 60%;
     --radius: 0.75rem;
+    color-scheme: light;
+  }
+
+  /* The Figma file only has a light theme; these keep the same hues on warm-neutral dark surfaces. */
+  .dark {
+    --background: 200 12% 7%;
+    --foreground: 210 14% 94%;
+    --card: 200 10% 10%;
+    --muted: 200 8% 15%;
+    --muted-foreground: 198 8% 66%;
+    --subtle-foreground: 198 6% 52%;
+    --border: 200 8% 19%;
+    --input: 200 8% 19%;
+    --ring: 172 55% 48%;
+    --primary: 172 60% 34%;
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 172 62% 27%;
+    --accent: 172 28% 15%;
+    --accent-foreground: 172 40% 82%;
+    --tint: 172 22% 17%;
+    --warning: 40 55% 18%;
+    --warning-foreground: 40 90% 66%;
+    color-scheme: dark;
   }
 
   * {

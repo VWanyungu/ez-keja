@@ -9,8 +9,6 @@ interface SearchFieldsProps {
   onChange: (next: SearchFilters) => void;
   areas: Area[];
   categories: SpaceCategory[];
-  /** Sits at the end of the row; the home page puts its Search button here. */
-  action?: React.ReactNode;
   className?: string;
 }
 
@@ -23,7 +21,7 @@ interface FieldProps {
 
 function Field({ label, value, onValueChange, children }: FieldProps) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-5 py-2">
+    <div className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-2xl px-5 py-2 transition-colors duration-500 ease-fluid hover:bg-muted/60">
       <span className="text-[11px] font-semibold uppercase leading-4 tracking-[0.06em] text-muted-foreground">{label}</span>
       <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger aria-label={label} className="h-5">
@@ -37,7 +35,7 @@ function Field({ label, value, onValueChange, children }: FieldProps) {
 
 const Divider = () => <div aria-hidden className="hidden h-9 w-px shrink-0 bg-border md:block" />;
 
-export function SearchFields({ values, onChange, areas, categories, action, className }: SearchFieldsProps) {
+export function SearchFields({ values, onChange, areas, categories, className }: SearchFieldsProps) {
   const set = (patch: Partial<SearchFilters>) => onChange({ ...values, ...patch });
   const orAny = (value: string) => (value === ANY ? undefined : value);
 
@@ -92,7 +90,6 @@ export function SearchFields({ values, onChange, areas, categories, action, clas
           </SelectItem>
         ))}
       </Field>
-      {action}
     </div>
   );
 }

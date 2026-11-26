@@ -29,9 +29,9 @@ export function SiteFooter() {
         <div className="flex flex-col justify-between gap-10 md:flex-row">
           <div className="flex flex-col gap-7">
             <div className="flex gap-5">
-              <img src={linkedinUrl} alt="LinkedIn" className="size-5" />
-              <img src={instagramUrl} alt="Instagram" className="size-5" />
-              <img src={facebookUrl} alt="Facebook" className="size-5" />
+              <img src={linkedinUrl} alt="LinkedIn" className="size-5 dark:invert" />
+              <img src={instagramUrl} alt="Instagram" className="size-5 dark:invert" />
+              <img src={facebookUrl} alt="Facebook" className="size-5 dark:invert" />
             </div>
             <div className="flex flex-wrap items-center gap-x-10 gap-y-2 text-[13px]">
               <span className="text-muted-foreground">©2026 KHunt</span>

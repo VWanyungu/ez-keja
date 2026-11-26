@@ -20,7 +20,7 @@ const SelectTrigger = forwardRef<
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <img src={chevUrl} alt="" className="size-3.5 shrink-0" />
+      <img src={chevUrl} alt="" className="size-3.5 shrink-0 dark:invert" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
@@ -36,7 +36,7 @@ const SelectContent = forwardRef<
       position={position}
       sideOffset={8}
       className={cn(
-        'relative z-50 max-h-72 min-w-[12rem] overflow-hidden rounded-lg border bg-card text-foreground shadow-panel data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        'relative z-50 max-h-72 min-w-[12rem] overflow-hidden rounded-2xl bg-card text-foreground shadow-float ring-1 ring-foreground/10 duration-500 ease-fluid data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         position === 'popper' && 'w-[var(--radix-select-trigger-width)] min-w-[var(--radix-select-trigger-width)]',
         className,
       )}
@@ -55,7 +55,7 @@ const SelectItem = forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-muted data-[state=checked]:font-semibold data-[state=checked]:text-accent-foreground data-[disabled]:opacity-50',
+      'relative flex w-full cursor-pointer select-none items-center rounded-xl px-3 py-2 text-sm outline-none transition-colors duration-300 ease-fluid data-[disabled]:pointer-events-none data-[highlighted]:bg-muted data-[state=checked]:font-semibold data-[state=checked]:text-accent-foreground data-[disabled]:opacity-50',
       className,
     )}
     {...props}

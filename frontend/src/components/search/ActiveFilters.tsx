@@ -27,7 +27,7 @@ export function ActiveFilters({ values, onChange, areas, categories }: ActiveFil
         <li key={key} className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium tracking-[0.01em]">
           {label}
           <button type="button" aria-label={`Remove filter: ${label}`} onClick={() => onChange({ ...values, [key]: undefined })}>
-            <img src={closeUrl} alt="" className="size-3" />
+            <img src={closeUrl} alt="" className="size-3 dark:invert" />
           </button>
         </li>
       ))}

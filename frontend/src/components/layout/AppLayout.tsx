@@ -2,12 +2,13 @@ import { Outlet } from 'react-router-dom';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 
-/** The header floats over each page's top section, so pages leave room for it. */
+/** The sticky header floats over each page's top section; -mt-[108px] is its 50px offset plus 58px height. */
 export function AppLayout() {
   return (
-    <div className="relative min-h-screen">
-      <SiteHeader className="absolute inset-x-4 top-3 z-20 md:inset-x-10" />
-      <main>
+    // flow-root stops the header's top margin from collapsing through this wrapper and shifting the page.
+    <div className="relative flow-root min-h-screen">
+      <SiteHeader />
+      <main className="-mt-[108px]">
         <Outlet />
       </main>
       <SiteFooter />

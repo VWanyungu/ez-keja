@@ -5,6 +5,7 @@ import { SearchPanel } from '@/components/search/SearchPanel';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { LoadingState } from '@/components/shared/LoadingState';
+import { Reveal } from '@/components/shared/Reveal';
 import { Button } from '@/components/ui/button';
 import { useBuildingSearch } from '@/hooks/queries/use-building-search';
 import { useAreas, useCategories } from '@/hooks/queries/use-reference';
@@ -52,9 +53,11 @@ export default function SearchPage() {
                   }
                 />
               ) : (
-                <div className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {buildings.map((b) => (
-                    <BuildingCard key={b.id} building={b} />
+                <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {buildings.map((b, i) => (
+                    <Reveal key={b.id} delay={(i % 3) * 90}>
+                      <BuildingCard building={b} />
+                    </Reveal>
                   ))}
                 </div>
               )}

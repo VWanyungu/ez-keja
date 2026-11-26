@@ -25,7 +25,10 @@ const config: Config = {
         accent: { DEFAULT: 'hsl(var(--accent))', foreground: 'hsl(var(--accent-foreground))' },
         tint: 'hsl(var(--tint))',
         warning: { DEFAULT: 'hsl(var(--warning))', foreground: 'hsl(var(--warning-foreground))' },
+        alert: 'hsl(var(--alert))',
       },
+      // A heavy, spring-like settle: fast off the mark, long soft landing. Used for every transition.
+      transitionTimingFunction: { fluid: 'cubic-bezier(0.32, 0.72, 0, 1)' },
       borderRadius: { lg: 'var(--radius)', md: 'calc(var(--radius) - 4px)', sm: 'calc(var(--radius) - 6px)' },
       fontFamily: {
         sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
@@ -35,6 +38,8 @@ const config: Config = {
         // CTA and search button: drop shadow plus a soft teal ring (Figma "Button" effect).
         cta: '0 8px 16px -6px rgba(15, 92, 82, 0.28), 0 0 0 3px rgba(15, 92, 82, 0.22)',
         panel: '0 10px 28px -10px rgba(13, 31, 28, 0.07)',
+        // Wide, low-opacity ambient shadow for floating panels.
+        float: '0 30px 60px -24px rgba(13, 31, 28, 0.18)',
       },
     },
   },

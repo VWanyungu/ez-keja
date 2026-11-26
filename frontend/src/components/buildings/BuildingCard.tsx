@@ -11,6 +11,41 @@ interface BuildingCardProps {
   className?: string;
 }
 
+interface GlyphProps {
+  src: string;
+  label: string;
+  /** Fill colour for the icon shape. */
+  className: string;
+}
+
+/**
+ * A badge that is only its icon, drawn from the SVG's shape as a mask so it can take a bright fill
+ * that stays legible on any photo. The soft shadow sits on a wrapper because a mask would clip it.
+ */
+function Glyph({ src, label, className }: GlyphProps) {
+  // Quoted: Vite inlines small SVGs as data URIs, and an unquoted url() with parentheses is dropped.
+  const mask = `url("${src}")`;
+  return (
+    <span className="drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]">
+      <span
+        aria-hidden
+        className={cn('block size-5', className)}
+        style={{
+          WebkitMaskImage: mask,
+          maskImage: mask,
+          WebkitMaskSize: 'contain',
+          maskSize: 'contain',
+          WebkitMaskRepeat: 'no-repeat',
+          maskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'center',
+          maskPosition: 'center',
+        }}
+      />
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
 export function BuildingCard({ building, className }: BuildingCardProps) {
   const { id, name, area, coverPhoto, rent, verification, outdated, latestUpdate } = building;
   const price = formatRent(rent);
@@ -20,36 +55,27 @@ export function BuildingCard({ building, className }: BuildingCardProps) {
     <Link
       to={`/buildings/${id}`}
       className={cn(
-        'block rounded-[28px] border border-foreground/[0.07] bg-card p-1.5 drop-shadow-[0_24px_24px_rgba(13,31,28,0.1)] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        // Outer shell of the bezel; the photo below is the inner core with a concentric radius.
+        'group block rounded-[28px] bg-card p-1.5 shadow-float ring-1 ring-foreground/[0.07] transition-transform duration-700 ease-fluid hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]',
         className,
       )}
     >
-      <div className="relative flex h-[400px] flex-col justify-between overflow-hidden rounded-[22px] bg-foreground px-4 pb-6 pt-4 text-white">
+      <div className="relative flex h-[460px] flex-col justify-between overflow-hidden rounded-[22px] bg-foreground px-5 pb-6 pt-5 text-white">
         {coverPhoto && (
           <img
             src={coverPhoto.medium}
             srcSet={`${coverPhoto.thumb} 320w, ${coverPhoto.medium} 800w`}
-            sizes="(min-width: 1024px) 308px, 50vw"
+            sizes="(min-width: 1024px) 414px, (min-width: 640px) 50vw, 100vw"
             alt={`${name}, cover photo`}
             loading="lazy"
-            className="absolute inset-0 size-full object-cover"
+            className="absolute inset-0 size-full object-cover transition-transform duration-[1200ms] ease-fluid group-hover:scale-105"
           />
         )}
         <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-[40%] to-black/80" />
 
-        <div className="relative flex items-center gap-1.5">
-          {verification.building === 'verified' && (
-            <span className="flex size-8 items-center justify-center rounded-full bg-accent">
-              <img src={sealUrl} alt="" className="size-[18px]" />
-              <span className="sr-only">Verified building</span>
-            </span>
-          )}
-          {outdated && (
-            <span className="flex size-8 items-center justify-center rounded-full bg-warning">
-              <img src={clockUrl} alt="" className="size-[18px]" />
-              <span className="sr-only">Availability may be outdated</span>
-            </span>
-          )}
+        <div className="relative flex items-center gap-2.5">
+          {verification.building === 'verified' && <Glyph src={sealUrl} label="Verified building" className="bg-white" />}
+          {outdated && <Glyph src={clockUrl} label="Availability may be outdated" className="bg-alert" />}
         </div>
 
         <div className="relative flex flex-col gap-3">
