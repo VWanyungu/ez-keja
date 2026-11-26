@@ -28,10 +28,13 @@ import {
 import searchRoutes from './modules/search/routes.js';
 import spaceTypesRoutes from './modules/space-types/routes.js';
 import verificationRoutes from './modules/verification/routes.js';
+import { applyRateLimits } from './rate-limit-routes.js';
 
 const router = express.Router();
 
 router.use('/health', healthRoutes);
+// Per-IP rate limits on the abuse-prone routes (off in development and tests, see middlewares/rate-limit.ts).
+applyRateLimits(router);
 router.use('/auth', authRoutes);
 router.use('/me', meRoutes);
 router.use('/admin', adminRoutes);
