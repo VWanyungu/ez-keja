@@ -47,6 +47,9 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 MAX_UPLOAD_BYTES=
+# Opt-in switch for the development catalogue seed (photos go to Cloudinary). `bun run seed:dev-catalogue`
+# sets it; leave it unset everywhere else so plain seeds and the test runner never upload photos.
+# SEED_DEV_CATALOGUE=1
 
 # Commute (Google Maps Geocoding + Directions). Unset key: the commute endpoint answers
 # "Commute information unavailable" and the rest of the site is unaffected.
