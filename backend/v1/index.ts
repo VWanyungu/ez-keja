@@ -6,7 +6,11 @@ import buildingsRoutes from './modules/buildings/routes.js';
 import commuteRoutes from './modules/commute/routes.js';
 import enquiriesRoutes from './modules/enquiries/routes.js';
 import filesRoutes from './modules/files/routes.js';
+import auditRoutes from './modules/audit/routes.js';
+import metricsRoutes from './modules/metrics/routes.js';
+import moderationRoutes from './modules/moderation/routes.js';
 import notificationsRoutes from './modules/notifications/routes.js';
+import userAdminRoutes from './modules/user-admin/routes.js';
 import reportsRoutes from './modules/reports/routes.js';
 import viewingsRoutes from './modules/viewings/routes.js';
 import followUpsRoutes from './modules/follow-ups/routes.js';
@@ -45,6 +49,11 @@ router.use(enquiriesRoutes);
 router.use(viewingsRoutes);
 router.use(reportsRoutes);
 router.use(notificationsRoutes);
+// Admin operations (Phase 10): moderation, user administration, audit search, metrics and exports.
+router.use(moderationRoutes);
+router.use(userAdminRoutes);
+router.use(auditRoutes);
+router.use(metricsRoutes);
 // Public side (Phase 7): Guest-friendly via optionalSession. Search, building and space-type pages,
 // tap-to-call events, lister profiles and the commute proxy.
 router.use(searchRoutes);

@@ -10,6 +10,7 @@ import {
 } from '../../lib/cloudinary.js';
 import { conflict, forbidden, HttpError, notFound } from '../../lib/http-error.js';
 import { isPublishedLike, loadBuildingAccess, type BuildingAccess } from '../../lib/maintainer.js';
+import { EVENT_MODERATION, notifyEach } from '../../lib/notify.js';
 import { generateUuidV7 } from '../../lib/uuid.js';
 import type { AuthContext } from '../../middlewares/auth.js';
 import type {
@@ -348,7 +349,7 @@ async function withLockedPhoto<T>(
   photoId: string,
   fn: (ctx: {
     trx: Knex.Transaction;
-    photo: { id: string; building_id: string | null; space_type_id: string | null; category: PhotoCategory };
+    photo: { id: string; building_id: string | null; space_type_id: string | null; category: PhotoCategory; uploaded_by: string };
     building: LockedBuilding;
     access: BuildingAccess;
   }) => Promise<T>,
@@ -368,8 +369,8 @@ async function withLockedPhoto<T>(
       .where({ id: photoId })
       .whereNull('removed_at')
       .forUpdate()
-      .first('id', 'building_id', 'space_type_id', 'category')) as
-      | { id: string; building_id: string | null; space_type_id: string | null; category: PhotoCategory }
+      .first('id', 'building_id', 'space_type_id', 'category', 'uploaded_by')) as
+      | { id: string; building_id: string | null; space_type_id: string | null; category: PhotoCategory; uploaded_by: string }
       | undefined;
     if (!photo) throw notFound('Photo not found.', { code: 'PHOTO_NOT_FOUND' });
 
@@ -460,6 +461,13 @@ export async function removePhoto(
       buildingId: access.buildingId,
       changes: { category: photo.category, reason },
     });
+    if (access.actsAsStaff) {
+      // N-10 (FR-ADM-003): the uploader is told when an Admin removes their photo, with the reason.
+      const { name } = (await trx('buildings').where({ id: access.buildingId }).first('name')) as { name: string };
+      await notifyEach(trx, [photo.uploaded_by], EVENT_MODERATION, {
+        subject: 'photo', action: 'removed', buildingId: access.buildingId, buildingName: name, category: photo.category, reason,
+      });
+    }
     return { id: photo.id, removedAt };
   });
 }
