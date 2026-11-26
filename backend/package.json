@@ -13,6 +13,7 @@
     "migrate:rollback": "bun run node_modules/knex/bin/cli.js migrate:rollback --knexfile knexfile.ts",
     "migrate:make": "bun run node_modules/knex/bin/cli.js migrate:make --knexfile knexfile.ts",
     "seed": "bun run node_modules/knex/bin/cli.js seed:run --knexfile knexfile.ts",
+    "seed:dev-catalogue": "SEED_DEV_CATALOGUE=1 bun run node_modules/knex/bin/cli.js seed:run --knexfile knexfile.ts --specific=07_dev_catalogue.ts",
     "test": "bun run scripts/run-unit-tests.ts",
     "test:integration": "NODE_ENV=development bun run scripts/run-integration-tests.ts"
   },
