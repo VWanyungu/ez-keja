@@ -1,6 +1,8 @@
 import type { ManagementType, SearchFilters } from '@/types/search';
 
 export const PAGE_SIZE = 8;
+/** The results page shows a full three-column grid per page. */
+export const RESULTS_PAGE_SIZE = 9;
 
 const MANAGEMENT: readonly string[] = ['agent', 'landlord'];
 

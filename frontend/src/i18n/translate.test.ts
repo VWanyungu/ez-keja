@@ -9,9 +9,9 @@ describe('translate', () => {
   });
 
   it('fills placeholders and leaves unknown ones visible', () => {
-    expect(translate('en', 'results.showingMany', { count: 8 })).toBe('Showing 8 buildings');
+    expect(translate('en', 'results.showingRange', { from: 1, to: 9 })).toBe('Showing 1–9 buildings');
     expect(translate('sw', 'active.under', { amount: 'KES 10,000' })).toBe('Chini ya KES 10,000');
-    expect(translate('en', 'results.showingMany')).toBe('Showing {count} buildings');
+    expect(translate('en', 'results.showingRange')).toBe('Showing {from}–{to} buildings');
   });
 
   it('falls back to English when Kiswahili lacks a key, never a raw key', () => {

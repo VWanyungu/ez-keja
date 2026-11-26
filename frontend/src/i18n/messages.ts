@@ -55,13 +55,15 @@ export const en = {
 
   // Results
   'results.showingOne': 'Showing 1 building',
-  'results.showingMany': 'Showing {count} buildings',
-  'results.showingManySoFar': 'Showing {count} buildings so far',
+  'results.showingRange': 'Showing {from}–{to} buildings',
   'results.emptyTitle': 'No buildings match these filters',
   'results.emptyBody': 'Try a different area or house type, or raise the maximum rent.',
   'results.clear': 'Clear filters',
-  'results.loadMore': 'Load more',
-  'results.loading': 'Loading…',
+  'page.label': 'Pagination',
+  'page.prev': 'Previous page',
+  'page.next': 'Next page',
+  'page.goTo': 'Page {page}',
+  'quick.label': 'Quick filters',
 
   // Building card
   'card.verified': 'Verified building',
@@ -153,13 +155,15 @@ export const sw: Partial<Record<MessageKey, string>> = {
   'active.remove': 'Ondoa kichujio: {label}',
 
   'results.showingOne': 'Inaonyesha jengo 1',
-  'results.showingMany': 'Inaonyesha majengo {count}',
-  'results.showingManySoFar': 'Inaonyesha majengo {count} hadi sasa',
+  'results.showingRange': 'Inaonyesha majengo {from}–{to}',
   'results.emptyTitle': 'Hakuna majengo yanayolingana na vichujio hivi',
   'results.emptyBody': 'Jaribu eneo au aina nyingine ya nyumba, au ongeza kodi ya juu.',
   'results.clear': 'Futa vichujio',
-  'results.loadMore': 'Pakia zaidi',
-  'results.loading': 'Inapakia…',
+  'page.label': 'Kurasa',
+  'page.prev': 'Ukurasa uliotangulia',
+  'page.next': 'Ukurasa unaofuata',
+  'page.goTo': 'Ukurasa wa {page}',
+  'quick.label': 'Vichujio vya haraka',
 
   'card.verified': 'Jengo lililothibitishwa',
   'card.outdated': 'Upatikanaji unaweza kuwa umepitwa na wakati',
