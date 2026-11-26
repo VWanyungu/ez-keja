@@ -7,6 +7,7 @@ export const SEARCH_SORTS = ['updated', 'rent_asc', 'rent_desc'] as const;
 export type SearchSort = (typeof SEARCH_SORTS)[number];
 
 export const MAX_RADIUS_KM = 50;
+export const MAX_TEXT_LENGTH = 100;
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 50;
 /** `numeric(14,2)` in `space_types.rent_amount`. */
@@ -34,6 +35,8 @@ export interface RadiusFilter {
 
 export interface SearchFilters {
   areaId: string | null;
+  /** Free text matched against the building name and its area name. */
+  q: string | null;
   radius: RadiusFilter | null;
   categoryId: string | null;
   currencyId: string | null;
@@ -48,7 +51,7 @@ export interface SearchFilters {
 }
 
 const ALLOWED_QUERY = [
-  'areaId', 'lat', 'lng', 'radiusKm', 'categoryId', 'currencyId', 'rentMin', 'rentMax',
+  'areaId', 'q', 'lat', 'lng', 'radiusKm', 'categoryId', 'currencyId', 'rentMin', 'rentMax',
   'includeRentOnInterest', 'management', 'verifiedOnly', 'sort', 'limit', 'cursor',
 ] as const;
 
@@ -113,6 +116,10 @@ export function parseSearchQuery(query: Record<string, unknown>): SearchFilters 
   }
 
   const areaId = uuid(query.areaId, 'areaId');
+  const qText = text(query.q, 'q')?.trim();
+  if (qText !== undefined && (qText.length < 1 || qText.length > MAX_TEXT_LENGTH)) {
+    throw badRequest(`Query "q" must be 1 to ${MAX_TEXT_LENGTH} characters.`);
+  }
   const lat = number(query.lat, 'lat', -90, 90);
   const lng = number(query.lng, 'lng', -180, 180);
   const radiusKm = number(query.radiusKm, 'radiusKm', 0.1, MAX_RADIUS_KM);
@@ -170,6 +177,7 @@ export function parseSearchQuery(query: Record<string, unknown>): SearchFilters 
 
   return {
     areaId,
+    q: qText ?? null,
     radius: anyRadius ? { lat: lat!, lng: lng!, radiusKm: radiusKm! } : null,
     categoryId: uuid(query.categoryId, 'categoryId'),
     currencyId,

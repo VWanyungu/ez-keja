@@ -36,6 +36,13 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery({ lat: '-1.28', lng: '36.8', radiusKm: '2.5' }).radius).toEqual({ lat: -1.28, lng: 36.8, radiusKm: 2.5 });
   });
 
+  it('reads and trims the text query, and refuses a blank or over-long one', () => {
+    expect(parseSearchQuery({}).q).toBeNull();
+    expect(parseSearchQuery({ q: '  Ngong Hills ' }).q).toBe('Ngong Hills');
+    expect(refused({ q: '   ' })?.status).toBe(400);
+    expect(refused({ q: 'x'.repeat(101) })?.status).toBe(400);
+  });
+
   it('refuses a rent sort without a currency (FR-SRC-006)', () => {
     expect(refused({ sort: 'rent_asc' })).toMatchObject({ status: 400, code: 'SORT_REQUIRES_CURRENCY' });
     expect(refused({ sort: 'rent_desc' })).toMatchObject({ status: 400, code: 'SORT_REQUIRES_CURRENCY' });
@@ -88,6 +95,13 @@ describe('buildSearchQuery (QP-01)', () => {
     expect(sql.match(/\?/g)!.length).toBe(bindings.length);
     expect(bindings).toEqual(['cat', 'cur', 1, 2, AREA, 'agent', 'T', 'I', 8]);
     expect(sql).toContain(`s.rent_mode = 'on_interest'`);
+  });
+
+  it('matches the text on building or area name, escaped, between the other filters and the cursor', () => {
+    const { sql, bindings } = buildSearchQuery(filters({ areaId: AREA, q: '50%_off', cursor: { kind: 'updated', t: 'T', id: 'I' } }));
+    expect(sql).toContain(`b.name ILIKE ? ESCAPE '\\' OR a.name ILIKE ? ESCAPE '\\'`);
+    expect(sql.match(/\?/g)!.length).toBe(bindings.length);
+    expect(bindings).toEqual([AREA, '%50\\%\\_off%', '%50\\%\\_off%', 'T', 'I', 21]);
   });
 
   it('counts an on-interest type only when included, and always repeats the literal fixed mode', () => {
