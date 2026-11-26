@@ -399,7 +399,7 @@ describe('Files and photos (PostgreSQL integration, fake Cloudinary)', () => {
 
     const purgeFake = createFakeCloudinary();
     const first = await purgeFiles({ client: purgeFake.client });
-    expect(first).toEqual({ orphansDeleted: 1, removedPhotosPurged: 1, failures: 0 });
+    expect(first).toEqual({ erasedFilesPurged: 0, orphansDeleted: 1, removedPhotosPurged: 1, failures: 0 });
     expect(purgeFake.destroyed.map((d) => d.publicId).sort()).toEqual(
       [orphanPublicId, removedFile.public_id].sort(),
     );
@@ -411,7 +411,7 @@ describe('Files and photos (PostgreSQL integration, fake Cloudinary)', () => {
     expect(purged.original_name).toBe('');
 
     const second = await purgeFiles({ client: purgeFake.client });
-    expect(second).toEqual({ orphansDeleted: 0, removedPhotosPurged: 0, failures: 0 });
+    expect(second).toEqual({ erasedFilesPurged: 0, orphansDeleted: 0, removedPhotosPurged: 0, failures: 0 });
 
     // A purged file can no longer be downloaded.
     const gone = await fetch(`${baseUrl}/files/${removedPhoto.file_id}/download`, { headers: auth(admin.token) });

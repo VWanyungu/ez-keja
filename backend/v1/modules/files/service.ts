@@ -509,7 +509,7 @@ export async function uploadEvidence(
 export async function getFileDownload(auth: AuthContext, fileId: string): Promise<FileDownload> {
   const file = (await db('files')
     .where({ id: fileId })
-    .first('id', 'public_id', 'resource_type', 'delivery_type', 'format', 'visibility', 'purged_at')) as
+    .first('id', 'public_id', 'resource_type', 'delivery_type', 'format', 'visibility', 'purged_at', 'purge_requested_at')) as
     | {
         id: string;
         public_id: string;
@@ -518,10 +518,11 @@ export async function getFileDownload(auth: AuthContext, fileId: string): Promis
         format: string;
         visibility: 'public' | 'restricted';
         purged_at: Date | null;
+        purge_requested_at: Date | null;
       }
     | undefined;
   if (!file) throw notFound('File not found.', { code: 'FILE_NOT_FOUND' });
-  if (file.purged_at) {
+  if (file.purged_at || file.purge_requested_at) {
     throw new HttpError(410, 'This file has been deleted.', { code: 'FILE_PURGED' });
   }
 

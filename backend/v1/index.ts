@@ -3,6 +3,7 @@ import adminRoutes from './modules/admin/routes.js';
 import authRoutes from './modules/auth/routes.js';
 import availabilityRoutes from './modules/availability/routes.js';
 import buildingsRoutes from './modules/buildings/routes.js';
+import dataRequestsRoutes from './modules/data-requests/routes.js';
 import commuteRoutes from './modules/commute/routes.js';
 import enquiriesRoutes from './modules/enquiries/routes.js';
 import filesRoutes from './modules/files/routes.js';
@@ -54,6 +55,8 @@ router.use(moderationRoutes);
 router.use(userAdminRoutes);
 router.use(auditRoutes);
 router.use(metricsRoutes);
+// Privacy (Phase 11): data subject requests, personal data export and erasure (absolute paths).
+router.use(dataRequestsRoutes);
 // Public side (Phase 7): Guest-friendly via optionalSession. Search, building and space-type pages,
 // tap-to-call events, lister profiles and the commute proxy.
 router.use(searchRoutes);

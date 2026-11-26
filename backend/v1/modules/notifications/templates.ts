@@ -223,6 +223,79 @@ const TEMPLATES: Record<string, Template> = {
         };
   },
 
+  // N-12: data subject requests (Phase 11, FR-PRV-002).
+  // payload: { kind: 'received' | 'acknowledged' | 'completed' | 'rejected' | 'deletion_completed',
+  //            requestType: 'access' | 'correction' | 'export' | 'deletion', reason?, exportDays? }
+  // `received` goes to every Admin, `acknowledged`/`completed`/`rejected` to the requester.
+  // `deletion_completed` is only ever sent as an e-mail straight to the requester's real address
+  // before the erasure replaces it (design §10.6 step 10); it is never stored as a notification row.
+  'N-12': (p, lang) => {
+    const labels: Record<Lang, Record<string, string>> = {
+      en: {
+        access: 'access to your data',
+        correction: 'correction of your data',
+        export: 'a copy of your data',
+        deletion: 'deletion of your data',
+      },
+      sw: {
+        access: 'kupata data yako',
+        correction: 'marekebisho ya data yako',
+        export: 'nakala ya data yako',
+        deletion: 'kufutwa kwa data yako',
+      },
+    };
+    // The Admin copy speaks about the user ("their data"), the requester copy about "your data".
+    const theirs: Record<Lang, Record<string, string>> = {
+      en: { access: 'access to their data', correction: 'correction of their data', export: 'a copy of their data', deletion: 'deletion of their data' },
+      sw: { access: 'kupata data zao', correction: 'marekebisho ya data zao', export: 'nakala ya data zao', deletion: 'kufutwa kwa data zao' },
+    };
+    const type = typeof p.requestType === 'string' ? p.requestType : '';
+    const kind = typeof p.kind === 'string' ? p.kind : '';
+    const label = (kind === 'received' ? theirs : labels)[lang][type] ?? (kind === 'received' ? (lang === 'sw' ? 'data zao' : 'their data') : lang === 'sw' ? 'data yako' : 'your data');
+    const days = typeof p.exportDays === 'number' && p.exportDays > 0 ? p.exportDays : 0;
+    const download = type === 'export' || type === 'access';
+    if (lang === 'sw') {
+      if (kind === 'received') {
+        return { title: 'Ombi jipya la data', body: `Mtumiaji ameomba ${label}. Fungua orodha ya maombi ya Msimamizi kulishughulikia.` };
+      }
+      if (kind === 'completed') {
+        const extra = download && days ? ` Unaweza kupakua data yako kutoka kwenye akaunti yako kwa siku ${days}.` : '';
+        return { title: 'Ombi lako la data limekamilika', body: `Ombi lako la ${label} limekamilika.${extra}` };
+      }
+      if (kind === 'rejected') {
+        return { title: 'Ombi lako la data halikukubaliwa', body: `Ombi lako la ${label} halikukubaliwa.${reasonLine(p, lang)}` };
+      }
+      if (kind === 'deletion_completed') {
+        return {
+          title: 'Data zako binafsi zimefutwa',
+          body:
+            'Kama ulivyoomba, data zako binafsi zimefutwa na akaunti yako haiwezi tena kutumika kuingia.\n' +
+            'Rekodi zinazopaswa kuhifadhiwa (kama kumbukumbu za ukaguzi, ujumbe wa maulizo na maombi ya kutazama) zinabaki bila jina lako.',
+        };
+      }
+      return { title: 'Tumepokea ombi lako la data', body: `Ombi lako la ${label} limepokelewa. Msimamizi atalishughulikia na utaarifiwa matokeo.` };
+    }
+    if (kind === 'received') {
+      return { title: 'New data request', body: `A user asked for ${label}. Open the Admin request queue to handle it.` };
+    }
+    if (kind === 'completed') {
+      const extra = download && days ? ` You can download your data from your account for ${days} day${days === 1 ? '' : 's'}.` : '';
+      return { title: 'Your data request was completed', body: `Your request for ${label} was completed.${extra}` };
+    }
+    if (kind === 'rejected') {
+      return { title: 'Your data request was not approved', body: `Your request for ${label} was not approved.${reasonLine(p, lang)}` };
+    }
+    if (kind === 'deletion_completed') {
+      return {
+        title: 'Your personal data has been erased',
+        body:
+          'As you asked, your personal data has been erased and your account can no longer be used to sign in.\n' +
+          'Records that must be kept (such as the audit log, enquiry messages and viewing requests) remain without your name.',
+      };
+    }
+    return { title: 'We received your data request', body: `Your request for ${label} was received. An Admin will handle it and you will be told the outcome.` };
+  },
+
   // N-13: the lister was verified and their building can now be confirmed and published.
   'N-13': (p, lang) =>
     lang === 'sw'
