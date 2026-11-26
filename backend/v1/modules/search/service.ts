@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import db from '../../db/knex.js';
 import { isoMicros, outdatedSql, summariseBuildingFreshness } from '../../lib/freshness.js';
+import { escapeLike } from '../../lib/like.js';
 import {
   BUILDING_PROFILE_JOINS_SQL,
   BUILDING_PROFILE_SELECT_SQL,
@@ -109,6 +110,11 @@ export function buildSearchQuery(f: SearchFilters): { sql: string; bindings: Kne
   }
   if (f.management) where.push(`b.management_type = ${bind(f.management)}`);
   if (f.verifiedOnly) where.push(`b.verification_status = 'verified'`); // FR-SRC-004
+  if (f.q) {
+    // shortcut: a plain substring scan over published buildings; add a trigram index if the catalogue outgrows it.
+    const pattern = `%${escapeLike(f.q)}%`;
+    where.push(`(b.name ILIKE ${bind(pattern)} ESCAPE '\\' OR a.name ILIKE ${bind(pattern)} ESCAPE '\\')`);
+  }
   where.push('u.latest IS NOT NULL', hasActiveMaintainerSql('b'));
 
   let orderBy = 'u.latest DESC, b.id DESC';

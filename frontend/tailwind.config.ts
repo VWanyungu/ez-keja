@@ -15,6 +15,7 @@ const config: Config = {
         muted: { DEFAULT: 'hsl(var(--muted))', foreground: 'hsl(var(--muted-foreground))' },
         subtle: 'hsl(var(--subtle-foreground))',
         border: 'hsl(var(--border))',
+        line: 'hsl(var(--line))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         primary: {

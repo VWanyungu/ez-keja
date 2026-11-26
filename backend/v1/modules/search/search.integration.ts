@@ -79,6 +79,20 @@ describe('Public search (PostgreSQL integration)', () => {
     });
   });
 
+  describe('text query', () => {
+    it('matches the building name or the area name, ignoring case, and treats % and _ literally', async () => {
+      const areaId = await makeArea('P7 Zebra Heights');
+      const byName = await seedBuilding({ areaId: await makeArea('P7 Text A'), listerId: landlord.id, name: 'Zebra Court 100%', types: [vacant()] });
+      const byArea = await seedBuilding({ areaId, listerId: landlord.id, name: 'Plain Block', types: [vacant()] });
+
+      expect(idsOf(await search({ q: 'zebra court' }))).toEqual([byName.id]);
+      expect(idsOf(await search({ q: 'ZEBRA HEIGHTS' }))).toEqual([byArea.id]);
+      expect(idsOf(await search({ q: '100%' }))).toEqual([byName.id]);
+      expect(idsOf(await search({ q: 'Zebra_Court' }))).toEqual([]);
+      expect(idsOf(await search({ q: 'zebra', areaId }))).toEqual([byArea.id]);
+    });
+  });
+
   describe('category filter (FR-SRC-002)', () => {
     it('matches a building only through a Vacant space type in the category', async () => {
       const areaId = await makeArea('P7 Category');

@@ -13,6 +13,8 @@
     --subtle-foreground: 198 5% 62%; /* ink/400 */
     --border: 220 13% 91%; /* border/default */
     --input: 220 13% 91%;
+    /* A firmer hairline than border/default, for the outline of the search controls. */
+    --line: 220 10% 80%;
     --ring: 172 69% 28%;
     --primary: 172 69% 28%; /* teal/600 */
     --primary-foreground: 0 0% 100%;
@@ -38,6 +40,7 @@
     --subtle-foreground: 198 6% 52%;
     --border: 200 8% 19%;
     --input: 200 8% 19%;
+    --line: 200 8% 30%;
     --ring: 172 55% 48%;
     --primary: 172 60% 34%;
     --primary-foreground: 0 0% 100%;

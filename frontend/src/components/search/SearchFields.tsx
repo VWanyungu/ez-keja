@@ -35,7 +35,7 @@ function Field({ label, value, onValueChange, children }: FieldProps) {
   );
 }
 
-const Divider = () => <div aria-hidden className="hidden h-9 w-px shrink-0 bg-border md:block" />;
+const Divider = () => <div aria-hidden className="hidden h-9 w-px shrink-0 bg-line md:block" />;
 
 export function SearchFields({ values, onChange, areas, categories, className }: SearchFieldsProps) {
   const { language, t } = useLanguage();

@@ -2,6 +2,7 @@ import { withTx } from '../../db/tx.js';
 import { writeAudit } from '../../lib/audit.js';
 import { conflict, notFound } from '../../lib/http-error.js';
 import { keysetPage, keysetWhere } from '../../lib/keyset.js';
+import { escapeLike } from '../../lib/like.js';
 import type { AuthContext } from '../../middlewares/auth.js';
 import type { AssignableRole, UserListQuery } from './schemas.js';
 
@@ -25,8 +26,6 @@ export interface UserListItem {
   erasedAt: Date | null;
   createdAt: string;
 }
-
-const escapeLike = (text: string): string => text.replace(/[\\%_]/g, '\\$&');
 
 export async function listUsers(
   auth: AuthContext,
