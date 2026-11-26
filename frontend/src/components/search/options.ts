@@ -11,6 +11,14 @@ export const BEDROOM_FILTERS: { code: string; label: MessageKey }[] = [
   { code: 'three_bedroom', label: 'bed.three' },
 ];
 
+/** The results page's one-tap house types, in the Figma order. A chip without a `label` shows the category's own name. */
+export const QUICK_FILTERS: { code: string; label?: MessageKey }[] = [
+  ...BEDROOM_FILTERS,
+  { code: 'office' },
+  { code: 'shop' },
+  { code: 'warehouse' },
+];
+
 /** Max rent steps in KES. */
 export const RENT_STEPS = [5_000, 10_000, 20_000, 30_000, 50_000, 100_000];
 
