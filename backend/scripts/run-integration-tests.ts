@@ -56,6 +56,7 @@ async function main(): Promise<void> {
       './v1/modules/notifications/notifications.integration.ts',
       './v1/modules/moderation/moderation.integration.ts',
       './v1/modules/metrics/metrics.integration.ts',
+      './v1/modules/data-requests/data-requests.integration.ts',
       // Inserts 12,000 buildings and removes them again, so it runs last.
       './v1/modules/search/search-performance.integration.ts',
     ];

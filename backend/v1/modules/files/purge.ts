@@ -15,6 +15,8 @@ export const REMOVED_PHOTO_PURGE_DAYS = 30;
 const BATCH_SIZE = 100;
 
 export interface PurgeResult {
+  /** Files an erasure asked to be deleted (design §10.6 step 6): asset destroyed, then `purged_at` set. */
+  erasedFilesPurged: number;
   orphansDeleted: number;
   removedPhotosPurged: number;
   failures: number;
@@ -44,11 +46,36 @@ export async function purgeFiles(options: PurgeOptions = {}): Promise<PurgeResul
   const conn = options.conn ?? db;
   const storage = options.client ?? getCloudinary();
   const now = options.now ?? new Date();
-  const result: PurgeResult = { orphansDeleted: 0, removedPhotosPurged: 0, failures: 0 };
+  const result: PurgeResult = { erasedFilesPurged: 0, orphansDeleted: 0, removedPhotosPurged: 0, failures: 0 };
+
+  // Erasure (TX-10) only sets `purge_requested_at` and blanks the name; the object is destroyed here
+  // and `purged_at` is set once Cloudinary has answered. Runs first so an erased profile photo
+  // (now unreferenced) is marked purged instead of being picked up as an orphan and deleted.
+  const requested = (await conn('files as f')
+    .whereNotNull('f.purge_requested_at')
+    .whereNull('f.purged_at')
+    .select(...FILE_COLUMNS)
+    .limit(BATCH_SIZE)) as FileRow[];
+
+  for (const file of requested) {
+    try {
+      await storage.destroy({
+        publicId: file.public_id,
+        resourceType: file.resource_type,
+        deliveryType: file.delivery_type,
+      });
+      await conn('files').where({ id: file.id }).update({ purged_at: now, original_name: '' });
+      result.erasedFilesPurged += 1;
+    } catch (err) {
+      result.failures += 1;
+      console.error(`purge-files: erased user's file ${file.id} failed`, err);
+    }
+  }
 
   const orphanCutoff = new Date(now.getTime() - ORPHAN_AFTER_HOURS * 3_600_000);
   const orphans = (await conn('files as f')
     .whereNull('f.purged_at')
+    .whereNull('f.purge_requested_at')
     .where('f.created_at', '<', orphanCutoff)
     .whereRaw('NOT EXISTS (SELECT 1 FROM photos x WHERE x.file_id = f.id)')
     .whereRaw('NOT EXISTS (SELECT 1 FROM verification_evidence x WHERE x.file_id = f.id)')

@@ -59,7 +59,7 @@ export async function adminRecipients(trx: Knex.Transaction): Promise<string[]> 
   return rows.map((r) => r.user_id);
 }
 
-/** SRS §10.2 event codes written by Phase 9. */
+/** SRS §10.2 event codes written by Phases 9 to 11. */
 export const EVENT_NEW_ENQUIRY_MESSAGE = 'N-05';
 export const EVENT_ENQUIRY_REPLY = 'N-06';
 export const EVENT_VIEWING = 'N-07';
@@ -68,6 +68,8 @@ export const EVENT_REPORT_RECEIVED = 'N-09';
 /** N-10 (FR-ADM-003): suspension, reinstatement or photo removal, sent to the affected user. */
 export const EVENT_MODERATION = 'N-10';
 export const EVENT_MAPS_USAGE = 'N-11';
+/** N-12 (FR-PRV-002): a data subject request was received (Admins, requester) or closed (requester). */
+export const EVENT_DATA_REQUEST = 'N-12';
 
 /**
  * Tells every active Admin about `eventCode` at most once per `dedupeKey` (for N-11: threshold and

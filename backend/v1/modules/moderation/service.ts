@@ -47,7 +47,7 @@ export interface BuildingModerationResult {
   suspensionCause: string | null;
 }
 
-interface LockedBuilding {
+export interface LockedBuilding {
   id: string;
   name: string;
   status: string;
@@ -57,7 +57,7 @@ interface LockedBuilding {
 }
 
 /** `ORDER BY id FOR UPDATE`: the locks are taken in ascending id order (design §9.3). */
-async function lockBuildings(trx: Knex.Transaction, ids: string[]): Promise<LockedBuilding[]> {
+export async function lockBuildings(trx: Knex.Transaction, ids: string[]): Promise<LockedBuilding[]> {
   if (ids.length === 0) return [];
   return (await trx('buildings')
     .whereIn('id', ids)
@@ -67,7 +67,7 @@ async function lockBuildings(trx: Knex.Transaction, ids: string[]): Promise<Lock
 }
 
 /** Maintainers whose account is active and not erased, oldest first; `exceptUserId` is left out. */
-async function activeMaintainers(
+export async function activeMaintainers(
   trx: Knex.Transaction,
   buildingId: string,
   exceptUserId?: string,
@@ -84,7 +84,7 @@ async function activeMaintainers(
   return (await qb) as Array<{ user_id: string; phone: string | null }>;
 }
 
-const CLEARED_SUSPENSION = {
+export const CLEARED_SUSPENSION = {
   status_before_suspension: null,
   suspension_cause: null,
   suspended_reason: null,
