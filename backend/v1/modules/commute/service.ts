@@ -1,4 +1,6 @@
 import db from '../../db/knex.js';
+import { withTx } from '../../db/tx.js';
+import { EVENT_MAPS_USAGE, notifyAdminsOnce } from '../../lib/notify.js';
 import { assertPubliclyAvailable, availabilitySelectSql, type AvailabilityRow } from '../../lib/public-catalogue.js';
 import { DailyQuota, directions, geocode, TtlCache, type DirectionsTime, type FetchFn, type GeocodeOutcome } from './maps.js';
 import type { CommuteMode, CommuteQuery } from './schemas.js';
@@ -43,6 +45,24 @@ export interface CommuteDeps {
   dailyLimit?: () => number;
   now?: () => number;
   log?: { warn: (m: string) => void; error: (m: string) => void };
+  /** N-11: told when usage first reaches 80% and 100% of the daily limit. Off unless given (unit tests have no database). */
+  onUsage?: (usage: { threshold: 80 | 100; used: number; limit: number; day: string }) => Promise<void> | void;
+}
+
+/**
+ * NFR-MON-01 / N-11: tell every Admin, at most once per threshold per UTC day. The notification
+ * table carries the idempotency (`notifyAdminsOnce`), so two PM2 instances that each cross the
+ * threshold in their own process still produce one notification per Admin.
+ */
+export async function notifyMapsUsage(usage: { threshold: 80 | 100; used: number; limit: number; day: string }): Promise<void> {
+  await withTx((trx) =>
+    notifyAdminsOnce(trx, EVENT_MAPS_USAGE, `maps:${usage.day}:${usage.threshold}`, {
+      threshold: usage.threshold,
+      used: usage.used,
+      limit: usage.limit,
+      day: usage.day,
+    }),
+  );
 }
 
 async function loadPublicPin(buildingId: string): Promise<{ lat: number; lng: number }> {
@@ -83,7 +103,14 @@ export function createCommuteService(deps: CommuteDeps = {}) {
       const n = Number(process.env.MAPS_DAILY_LIMIT);
       return Number.isInteger(n) && n > 0 ? n : DEFAULT_MAPS_DAILY_LIMIT;
     });
-  const quota = new DailyQuota(dailyLimit, now, log);
+  const quota = new DailyQuota(dailyLimit, now, log, (threshold, used, limit) => {
+    if (!deps.onUsage) return;
+    // Fire and forget: a failed notification must never slow down or break a commute answer.
+    const day = new Date(now()).toISOString().slice(0, 10);
+    Promise.resolve()
+      .then(() => deps.onUsage!({ threshold, used, limit, day }))
+      .catch((err) => log.error(`[maps] could not record the ${threshold}% usage notification: ${err instanceof Error ? err.name : 'error'}`)); // name only: a message could carry personal data
+  });
   const modeCache = new TtlCache<CachedMode>(MODE_CACHE_TTL_MS, CACHE_MAX_ENTRIES, now);
   const geocodeCache = new TtlCache<GeocodeOutcome>(GEOCODE_CACHE_TTL_MS, CACHE_MAX_ENTRIES, now);
 
@@ -166,4 +193,4 @@ export function createCommuteService(deps: CommuteDeps = {}) {
   };
 }
 
-export const getCommute = createCommuteService();
+export const getCommute = createCommuteService({ onUsage: notifyMapsUsage });

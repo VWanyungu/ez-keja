@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { lockBuildingRow, withTx } from '../db/tx.js';
 import { conflict } from './http-error.js';
 import { isPublishedLike, loadBuildingAccess, type BuildingAccess } from './maintainer.js';
+import { EVENT_SPACE_TYPE_UNAVAILABLE, notifyEach } from './notify.js';
 import type { AuthContext, UserRole } from '../middlewares/auth.js';
 
 type Conn = Knex | Knex.Transaction;
@@ -71,18 +72,25 @@ export type DemandClosureReason = 'fully_let' | 'space_type_removed';
  * TX-01 / TX-13: a space type stopped being available (count reached 0, or it was removed). Closes
  * its open enquiries and cancels its future viewings (`requested`, `counter_proposed`, `accepted`
  * whose time is still ahead; past-dated `requested` ones belong to the expiry job). Call inside the
- * caller's transaction with the space type row already locked. Notifying clients is Phase 9.
+ * caller's transaction with the space type row already locked. Tells the affected clients (N-08).
  */
 export async function closeSpaceTypeDemand(
   trx: Knex.Transaction,
   spaceTypeId: string,
-  opts: { enquiryReason: DemandClosureReason; viewingReason: DemandClosureReason; cancelledBy: string | null },
+  opts: {
+    enquiryReason: DemandClosureReason;
+    viewingReason: DemandClosureReason;
+    cancelledBy: string | null;
+    /** What the clients are told in N-08. Defaults to `enquiryReason`; removal stores `fully_let` (Phase 5) but says "removed". */
+    cause?: DemandClosureReason;
+  },
 ): Promise<{ closedEnquiries: number; cancelledViewings: number }> {
-  const closedEnquiries = await trx('enquiries')
+  const closed = (await trx('enquiries')
     .where({ space_type_id: spaceTypeId })
     .whereNot({ status: 'closed' })
-    .update({ status: 'closed', closed_reason: opts.enquiryReason, closed_at: trx.fn.now() });
-  const cancelledViewings = await trx('viewing_requests')
+    .update({ status: 'closed', closed_reason: opts.enquiryReason, closed_at: trx.fn.now() })
+    .returning('client_id')) as Array<{ client_id: string }>;
+  const cancelled = (await trx('viewing_requests')
     .where({ space_type_id: spaceTypeId })
     .whereIn('status', ['requested', 'accepted', 'counter_proposed'])
     .whereRaw('COALESCE(counter_for, requested_for) > now()')
@@ -91,8 +99,27 @@ export async function closeSpaceTypeDemand(
       cancelled_by: opts.cancelledBy,
       cancelled_at: trx.fn.now(),
       cancel_reason: opts.viewingReason,
+    })
+    .returning('client_id')) as Array<{ client_id: string }>;
+
+  // N-08 (FR-AVL-009): each affected client is told once, whether they had a thread, a viewing or both.
+  const clients = [...new Set([...closed, ...cancelled].map((r) => r.client_id))];
+  if (clients.length > 0) {
+    const info = (await trx('space_types as st')
+      .join('buildings as b', 'b.id', 'st.building_id')
+      .where('st.id', spaceTypeId)
+      .first('st.name as space_type_name', 'b.id as building_id', 'b.name as building_name')) as
+      | { space_type_name: string; building_id: string; building_name: string }
+      | undefined;
+    await notifyEach(trx, clients, EVENT_SPACE_TYPE_UNAVAILABLE, {
+      spaceTypeId,
+      spaceTypeName: info?.space_type_name ?? null,
+      buildingId: info?.building_id ?? null,
+      buildingName: info?.building_name ?? null,
+      reason: opts.cause ?? opts.enquiryReason,
     });
-  return { closedEnquiries, cancelledViewings };
+  }
+  return { closedEnquiries: closed.length, cancelledViewings: cancelled.length };
 }
 
 /** Roles held by each of the given users (empty set for an unknown user). */

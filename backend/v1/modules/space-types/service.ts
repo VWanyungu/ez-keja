@@ -26,7 +26,7 @@ import {
 /**
  * What removing a space type closes and cancels. The brief and TX-01 use 'fully_let'; the schema
  * also allows 'space_type_removed' for both columns, which is the more exact word. Change these
- * two constants to switch (the notification wording is Phase 9).
+ * two constants to switch. The N-08 notification says "removed" regardless (`cause` below).
  */
 const ENQUIRY_CLOSED_REASON = 'fully_let' as const;
 const VIEWING_CANCEL_REASON = 'fully_let' as const;
@@ -329,6 +329,7 @@ export async function removeSpaceType(auth: AuthContext, id: string): Promise<Re
           enquiryReason: ENQUIRY_CLOSED_REASON,
           viewingReason: VIEWING_CANCEL_REASON,
           cancelledBy: auth.user.id,
+          cause: 'space_type_removed',
         }));
       },
       'This space type cannot be removed from a published building',

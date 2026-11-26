@@ -438,8 +438,14 @@ describe('Availability counts, freshness, reminders and follow-ups (PostgreSQL i
       expect(await viewingRow(rows.cancelled!)).toMatchObject({ status: 'cancelled', cancel_reason: 'client' });
       expect((await viewingRow(rows.otherViewing!)).status).toBe('requested');
 
-      // Phase 9 creates the N-08 notifications; this phase creates none.
-      expect(Number((await db('notifications').count({ n: '*' }).first())!.n)).toBe(notificationsBefore);
+      // N-08 (Phase 9): one notification per affected client, whether they had a thread, a viewing or
+      // both (clients a, b and d), written in the same transaction. Nobody else is told.
+      expect(Number((await db('notifications').count({ n: '*' }).first())!.n)).toBe(notificationsBefore + 3);
+      const told = (await db('notifications')
+        .where({ event_code: 'N-08' })
+        .whereRaw("payload->>'spaceTypeId' = ?", [typeId])
+        .pluck('user_id')) as string[];
+      expect(told.sort()).toEqual([clients[0]!.id, clients[1]!.id, clients[3]!.id].sort());
     });
 
     it('does nothing more when a Fully let space type is marked fully let again', async () => {

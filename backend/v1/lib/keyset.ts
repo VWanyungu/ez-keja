@@ -31,6 +31,33 @@ export function decodeCursor(value: string): KeysetCursor {
   throw badRequest('Query "cursor" is not valid. Use the "nextCursor" of the previous page.');
 }
 
+/**
+ * `WHERE (col, id) < cursor` (or `>` for ascending lists) as a raw fragment for `whereRaw`.
+ * `column` and `idColumn` are constants written by the caller, never request input.
+ */
+export function keysetWhere(
+  column: string,
+  idColumn: string,
+  cursor: KeysetCursor | null,
+  direction: 'asc' | 'desc' = 'desc',
+): [string, string[]] | null {
+  if (!cursor) return null;
+  return [`(${column}, ${idColumn}) ${direction === 'desc' ? '<' : '>'} (?::timestamptz, ?::uuid)`, [cursor.t, cursor.id]];
+}
+
+/** Fetch `limit + 1` rows (each with `cursor_t = col::text`), then call this to cut the page. */
+export function keysetPage<T extends { id: string; cursor_t: string }>(
+  rows: T[],
+  limit: number,
+): { items: T[]; nextCursor: string | null } {
+  const items = rows.slice(0, limit);
+  const last = items[items.length - 1];
+  return {
+    items,
+    nextCursor: rows.length > limit && last ? encodeCursor({ t: last.cursor_t, id: last.id }) : null,
+  };
+}
+
 export interface KeysetQuery {
   limit: number;
   cursor: KeysetCursor | null;

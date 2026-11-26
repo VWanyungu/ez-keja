@@ -284,6 +284,8 @@ export interface MyBuildingItem {
   /** BR-030: the building's latest update among its Vacant space types, and its freshness. */
   latestUpdate: string | null;
   freshness: FreshnessState;
+  /** FR-RPT-003: enquiries on this building's space types that no maintainer has answered yet (`status = 'new'`, Q-D7). */
+  awaitingReplyCount: number;
   spaceTypes: Array<{
     id: string;
     name: string;
@@ -298,7 +300,7 @@ export interface MyBuildingItem {
 
 /**
  * FR-RPT-003 "My buildings": the buildings the signed-in user maintains, each space type with its
- * vacant count and days since `last_confirmed_at`. "Enquiries awaiting reply" arrives in Phase 9.
+ * vacant count and days since `last_confirmed_at`, plus the enquiries awaiting a reply.
  */
 export async function listMyBuildings(auth: AuthContext): Promise<MyBuildingItem[]> {
   const buildings = (await db('buildings as b')
@@ -340,6 +342,14 @@ export async function listMyBuildings(auth: AuthContext): Promise<MyBuildingItem
     outdated: boolean;
   }>;
 
+  const awaiting = (await db('enquiries as e')
+    .join('space_types as st', 'st.id', 'e.space_type_id')
+    .whereIn('st.building_id', buildings.map((b) => b.id))
+    .where('e.status', 'new')
+    .groupBy('st.building_id')
+    .select('st.building_id', db.raw('count(*)::int AS n'))) as Array<{ building_id: string; n: number }>;
+  const awaitingOf = new Map(awaiting.map((row) => [row.building_id, row.n]));
+
   return buildings.map((b) => {
     const own = types
       .filter((t) => t.building_id === b.id)
@@ -362,6 +372,7 @@ export async function listMyBuildings(auth: AuthContext): Promise<MyBuildingItem
       updatedAt: b.updated_at,
       latestUpdate,
       freshness: state,
+      awaitingReplyCount: awaitingOf.get(b.id) ?? 0,
       spaceTypes: own.map(({ outdated, ...rest }) => ({ ...rest, freshness: freshnessOf(rest.vacantCount, outdated) })),
     };
   });
