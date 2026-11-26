@@ -16,6 +16,12 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 MAX_UPLOAD_BYTES=
 
+# Commute (Google Maps Geocoding + Directions). Unset key: the commute endpoint answers
+# "Commute information unavailable" and the rest of the site is unaffected.
+GOOGLE_MAPS_API_KEY=
+# Google calls allowed per day, per process (default 1000). A warning is logged at 80%.
+MAPS_DAILY_LIMIT=
+
 DB_HOST=
 DB_PORT=
 DB_USER=

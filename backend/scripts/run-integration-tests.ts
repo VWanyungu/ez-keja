@@ -49,9 +49,17 @@ async function main(): Promise<void> {
       './v1/modules/files/files.integration.ts',
       './v1/modules/buildings/buildings.integration.ts',
       './v1/modules/availability/availability.integration.ts',
+      './v1/modules/search/search.integration.ts',
+      './v1/modules/public-pages/public-pages.integration.ts',
+      // Inserts 12,000 buildings and removes them again, so it runs last.
+      './v1/modules/search/search-performance.integration.ts',
     ];
 
-    for (const file of integrationFiles) {
+    // Optional filter while iterating: `bun run test:integration search,files` runs the files whose
+    // path contains any of the comma-separated words, in the order above, on one shared database.
+    const only = process.argv[2]?.split(',');
+
+    for (const file of integrationFiles.filter((f) => !only || only.some((word) => f.includes(word)))) {
       const proc = Bun.spawn(['bun', 'test', file], {
         cwd: process.cwd(),
         env: {
