@@ -14,11 +14,13 @@ export interface RentRange {
 }
 
 export type ManagementType = 'agent' | 'landlord';
+export type SearchSort = 'updated' | 'rent_asc' | 'rent_desc';
 
 export interface BuildingCard {
   id: string;
   name: string;
   area: { id: string; name: string };
+  location: { latitude: number; longitude: number };
   coverPhoto: PhotoUrls | null;
   /** One range per currency; `rentOnInterest` is true when no Vacant type shows a rent. */
   rent: { ranges: RentRange[]; rentOnInterest: boolean };
@@ -33,6 +35,7 @@ export interface BuildingCard {
 export interface SearchPage {
   items: BuildingCard[];
   nextCursor: string | null;
+  total: number;
 }
 
 /** What the search screens let a visitor pick. Kept in the URL, so a search can be shared. */
@@ -45,4 +48,5 @@ export interface SearchFilters {
   maxRent?: number;
   management?: ManagementType;
   verifiedOnly?: boolean;
+  sort?: SearchSort;
 }

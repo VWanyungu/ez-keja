@@ -3,14 +3,20 @@ import { filtersFromParams, filtersToParams, toApiQuery } from './search-params'
 
 describe('filtersFromParams', () => {
   it('reads every filter', () => {
-    const params = new URLSearchParams('areaId=a1&categoryId=c1&maxRent=10000&management=agent&verifiedOnly=true');
+    const params = new URLSearchParams('areaId=a1&categoryId=c1&maxRent=10000&management=agent&verifiedOnly=true&sort=rent_asc');
     expect(filtersFromParams(params)).toEqual({
       areaId: 'a1',
       categoryId: 'c1',
       maxRent: 10000,
       management: 'agent',
       verifiedOnly: true,
+      sort: 'rent_asc',
     });
+  });
+
+  it('drops updated (default) and invalid sort values from URL filters', () => {
+    expect(filtersFromParams(new URLSearchParams('sort=updated'))).toEqual({});
+    expect(filtersFromParams(new URLSearchParams('sort=cheapest'))).toEqual({});
   });
 
   it('reads the text query trimmed and capped at the length the API accepts', () => {
@@ -50,5 +56,15 @@ describe('toApiQuery', () => {
     const query = new URLSearchParams(toApiQuery({ maxRent: 10000 }, { limit: 8 }));
     expect(query.has('rentMax')).toBe(false);
     expect(query.has('currencyId')).toBe(false);
+  });
+
+  it('sends currencyId with rent sorting and omits rent sorting until currencyId is known', () => {
+    const ready = new URLSearchParams(toApiQuery({ sort: 'rent_asc' }, { currencyId: 'kes', limit: 12 }));
+    expect(ready.get('sort')).toBe('rent_asc');
+    expect(ready.get('currencyId')).toBe('kes');
+
+    const pending = new URLSearchParams(toApiQuery({ sort: 'rent_desc' }, { limit: 12 }));
+    expect(pending.has('sort')).toBe(false);
+    expect(pending.has('currencyId')).toBe(false);
   });
 });

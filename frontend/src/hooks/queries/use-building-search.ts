@@ -11,8 +11,9 @@ const DEFAULT_CURRENCY = 'KES';
 export function useBuildingSearch(filters: SearchFilters, pageSize: number) {
   const { data: currencies } = useCurrencies();
   const currencyId = currencies?.find((c) => c.code === DEFAULT_CURRENCY)?.id;
-  // A max rent is compared in one currency, so wait until we know which one KES is.
-  const ready = filters.maxRent === undefined || currencyId !== undefined;
+  const needsCurrency = filters.maxRent !== undefined || (filters.sort !== undefined && filters.sort !== 'updated');
+  // Rent filters and rent sorting are compared in one currency, so wait until we know which one KES is.
+  const ready = !needsCurrency || currencyId !== undefined;
 
   return useInfiniteQuery({
     queryKey: queryKeys.search.buildings(toApiQuery(filters, { currencyId, limit: pageSize })),

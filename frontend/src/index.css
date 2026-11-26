@@ -59,3 +59,15 @@
     @apply bg-background font-sans text-[15px] leading-6 text-foreground antialiased;
   }
 }
+
+/* MapLibre GL attribution blending with light/dark surfaces. */
+.maplibregl-ctrl-attrib {
+  font-size: 10px !important;
+  background: hsl(var(--background) / 0.72) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  backdrop-filter: blur(6px);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: inherit !important;
+}
