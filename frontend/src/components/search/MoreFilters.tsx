@@ -24,7 +24,7 @@ function Option({ label, checked, onCheckedChange }: OptionProps) {
 }
 
 const GroupLabel = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-[11px] font-semibold uppercase leading-4 tracking-[0.06em] text-muted-foreground">{children}</p>
+  <p className="text-xs font-medium leading-4 text-muted-foreground">{children}</p>
 );
 
 const MANAGEMENT: { type: ManagementType; label: MessageKey }[] = [
