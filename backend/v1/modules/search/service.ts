@@ -27,6 +27,8 @@ export interface BuildingCard {
   id: string;
   name: string;
   area: { id: string; name: string };
+  /** Exact pin as stored (BR-019 / G-06 default, matching PublicBuildingPage). */
+  location: { latitude: number; longitude: number };
   coverPhoto: PhotoUrls | null;
   /**
    * FR-SRC-005: one range per currency over the building's Vacant space types that show a rent.
@@ -44,6 +46,7 @@ export interface BuildingCard {
 export interface SearchPage {
   items: BuildingCard[];
   nextCursor: string | null;
+  total: number;
 }
 
 interface CandidateRow extends BuildingProfileRow {
@@ -51,23 +54,20 @@ interface CandidateRow extends BuildingProfileRow {
   name: string;
   area_id: string;
   area_name: string;
+  latitude: string;
+  longitude: string;
   latest_text: string;
   min_rent: string | null;
 }
 
 const KM_PER_DEGREE = 111.32;
 
-/**
- * QP-01 (DATABASE_DESIGN §11.1): published buildings with at least one matching Vacant space type,
- * via a lateral aggregate over `ix_space_types_building_vacant`. `u.latest` is NULL exactly when no
- * Vacant type matches, which is BR-002. Keyset only; the cursor carries `latest::text` so
- * microseconds survive (§7.4). Exported so the performance test explains the very SQL that runs.
- *
- * Under a category or rent filter `latest` is the latest update among the MATCHING types, so the
- * order is "newest matching update first"; the card's own `latestUpdate` always covers every Vacant
- * type (BR-030).
- */
-export function buildSearchQuery(f: SearchFilters): { sql: string; bindings: Knex.RawBinding[] } {
+function buildSearchConditions(f: SearchFilters): {
+  lateral: string[];
+  lowestRent: string;
+  where: string[];
+  bindings: Knex.RawBinding[];
+} {
   const bindings: Knex.RawBinding[] = [];
   const bind = (value: Knex.RawBinding): string => {
     bindings.push(value);
@@ -117,6 +117,26 @@ export function buildSearchQuery(f: SearchFilters): { sql: string; bindings: Kne
   }
   where.push('u.latest IS NOT NULL', hasActiveMaintainerSql('b'));
 
+  return { lateral, lowestRent, where, bindings };
+}
+
+/**
+ * QP-01 (DATABASE_DESIGN §11.1): published buildings with at least one matching Vacant space type,
+ * via a lateral aggregate over `ix_space_types_building_vacant`. `u.latest` is NULL exactly when no
+ * Vacant type matches, which is BR-002. Keyset only; the cursor carries `latest::text` so
+ * microseconds survive (§7.4). Exported so the performance test explains the very SQL that runs.
+ *
+ * Under a category or rent filter `latest` is the latest update among the MATCHING types, so the
+ * order is "newest matching update first"; the card's own `latestUpdate` always covers every Vacant
+ * type (BR-030).
+ */
+export function buildSearchQuery(f: SearchFilters): { sql: string; bindings: Knex.RawBinding[] } {
+  const { lateral, lowestRent, where, bindings } = buildSearchConditions(f);
+  const bind = (value: Knex.RawBinding): string => {
+    bindings.push(value);
+    return '?';
+  };
+
   let orderBy = 'u.latest DESC, b.id DESC';
   const cursor = f.cursor;
   if (f.sort === 'updated') {
@@ -142,7 +162,8 @@ export function buildSearchQuery(f: SearchFilters): { sql: string; bindings: Kne
   }
 
   const sql = `
-    SELECT b.id, b.name, b.area_id, a.name AS area_name, u.latest::text AS latest_text,
+    SELECT b.id, b.name, b.area_id, a.name AS area_name, b.latitude::text AS latitude,
+      b.longitude::text AS longitude, u.latest::text AS latest_text,
       u.min_rent::text AS min_rent, ${BUILDING_PROFILE_SELECT_SQL}
     FROM buildings b
     CROSS JOIN LATERAL (
@@ -155,6 +176,23 @@ export function buildSearchQuery(f: SearchFilters): { sql: string; bindings: Kne
     WHERE ${where.join('\n      AND ')}
     ORDER BY ${orderBy}
     LIMIT ${bind(f.limit + 1)}`;
+  return { sql, bindings };
+}
+
+/** Total matching buildings across all pages (ignores cursor, sort and limit). */
+export function buildSearchCountQuery(f: SearchFilters): { sql: string; bindings: Knex.RawBinding[] } {
+  const { lateral, where, bindings } = buildSearchConditions(f);
+  const sql = `
+    SELECT count(*)::int AS total
+    FROM buildings b
+    CROSS JOIN LATERAL (
+      SELECT max(s.last_confirmed_at) AS latest
+      FROM space_types s
+      WHERE ${lateral.join(' AND ')}
+    ) u
+    JOIN areas a ON a.id = b.area_id
+    ${BUILDING_PROFILE_JOINS_SQL}
+    WHERE ${where.join('\n      AND ')}`;
   return { sql, bindings };
 }
 
@@ -187,7 +225,9 @@ export function summariseRent(
 /** FR-SRC-001 to FR-SRC-006, BR-002. */
 export async function searchBuildings(filters: SearchFilters): Promise<SearchPage> {
   const { sql, bindings } = buildSearchQuery(filters);
-  const result = await db.raw(sql, bindings);
+  const { sql: countSql, bindings: countBindings } = buildSearchCountQuery(filters);
+  const [result, countResult] = await Promise.all([db.raw(sql, bindings), db.raw(countSql, countBindings)]);
+  const total = Number((countResult.rows[0] as { total: number | string } | undefined)?.total ?? 0);
   const rows = result.rows as CandidateRow[];
   const page = rows.slice(0, filters.limit);
   const last = page[page.length - 1];
@@ -199,7 +239,7 @@ export async function searchBuildings(filters: SearchFilters): Promise<SearchPag
             : { kind: 'rent', r: last.min_rent, id: last.id },
         )
       : null;
-  if (page.length === 0) return { items: [], nextCursor: null };
+  if (page.length === 0) return { items: [], nextCursor: null, total };
 
   const ids = page.map((r) => r.id);
   // QP-04: the rent ranges and freshness of the whole page in one grouped read of the covering index.
@@ -239,6 +279,7 @@ export async function searchBuildings(filters: SearchFilters): Promise<SearchPag
       id: row.id,
       name: row.name,
       area: { id: row.area_id, name: row.area_name },
+      location: { latitude: Number(row.latitude), longitude: Number(row.longitude) },
       coverPhoto: publicId ? photoUrls(publicId) : null,
       rent: summariseRent(own),
       management: toManagement(row),
@@ -247,5 +288,5 @@ export async function searchBuildings(filters: SearchFilters): Promise<SearchPag
       outdated: state === 'may_be_outdated',
     };
   });
-  return { items, nextCursor };
+  return { items, nextCursor, total };
 }

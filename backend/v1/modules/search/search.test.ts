@@ -4,7 +4,7 @@ import type { Server } from 'node:http';
 import { encodeCursor } from '../../lib/keyset.js';
 import { createSearchRouter } from './routes.js';
 import { encodeRentCursor, parseSearchQuery, type SearchFilters } from './schemas.js';
-import { buildSearchQuery, summariseRent } from './service.js';
+import { buildSearchCountQuery, buildSearchQuery, summariseRent } from './service.js';
 
 const AREA = '019363c8-1234-7000-8000-0000000000a1';
 const CURRENCY = '019363c8-1234-7000-8000-0000000000e1';
@@ -125,6 +125,16 @@ describe('buildSearchQuery (QP-01)', () => {
     const desc = buildSearchQuery(filters({ currencyId: CURRENCY, sort: 'rent_desc' })).sql;
     expect(asc).toContain('ORDER BY u.min_rent ASC NULLS LAST, b.id DESC');
     expect(desc).toContain('ORDER BY u.min_rent DESC NULLS LAST, b.id DESC');
+  });
+
+  it('builds a count query with all filter bindings and no cursor, order or limit', () => {
+    const { sql, bindings } = buildSearchCountQuery(
+      filters({ areaId: AREA, categoryId: 'cat', limit: 7, cursor: { kind: 'updated', t: 'T', id: 'I' } }),
+    );
+    expect(sql).toContain('SELECT count(*)::int AS total');
+    expect(sql).not.toMatch(/order by|limit/i);
+    expect(sql.match(/\?/g)!.length).toBe(bindings.length);
+    expect(bindings).toEqual(['cat', AREA]);
   });
 });
 

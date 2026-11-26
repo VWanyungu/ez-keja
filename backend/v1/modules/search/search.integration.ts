@@ -74,7 +74,7 @@ describe('Public search (PostgreSQL integration)', () => {
     it('answers an empty page for an area with nothing, and works with no location filter at all', async () => {
       const empty = await search({ areaId: await makeArea('P7 Empty') });
       expect(empty.status).toBe(200);
-      expect(empty.body.data).toEqual({ items: [], nextCursor: null });
+      expect(empty.body.data).toEqual({ items: [], nextCursor: null, total: 0 });
       expect((await search({})).status).toBe(200);
     });
   });
@@ -294,6 +294,7 @@ describe('Public search (PostgreSQL integration)', () => {
       const expected = [...newer, ...tied, ...older];
 
       const first = await search({ areaId, limit: '3' });
+      expect(first.body.data.total).toBe(12);
       expect(JSON.parse(Buffer.from(first.body.data.nextCursor, 'base64url').toString()).t).toContain('.123457');
 
       const seen: string[] = [];
