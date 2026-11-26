@@ -40,7 +40,7 @@ async function fingerprint(): Promise<Record<string, string[]>> {
     indexes: await list(`SELECT indexdef AS v FROM pg_indexes WHERE schemaname = 'public' AND tablename NOT LIKE 'knex_migrations%'`),
     constraints: await list(`SELECT conrelid::regclass::text || '.' || conname || ' ' || pg_get_constraintdef(oid) AS v
                                FROM pg_constraint WHERE connamespace = 'public'::regnamespace AND conrelid::regclass::text NOT LIKE 'knex_migrations%'`),
-    triggers: await list(`SELECT c.relname || '.' || t.tgname || ' ' || t.tgenabled AS v
+    triggers: await list(`SELECT c.relname || '.' || t.tgname || ' ' || t.tgenabled::text AS v
                             FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid WHERE NOT t.tgisinternal AND c.relnamespace = 'public'::regnamespace`),
     functions: await list(`SELECT proname || '(' || pg_get_function_identity_arguments(oid) || ')' AS v FROM pg_proc WHERE pronamespace = 'public'::regnamespace`),
     views: await list(`SELECT viewname AS v FROM pg_views WHERE schemaname = 'public'`),
