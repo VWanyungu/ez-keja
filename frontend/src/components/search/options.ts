@@ -1,7 +1,19 @@
 import type { MessageKey } from '@/i18n/messages';
+import type { SearchFilters } from '@/types/search';
 
 /** Sentinel for "no filter": Radix Select cannot hold an empty-string value. */
 export const ANY = 'any';
+
+/** Number of active panel filters (matches ActiveFilters pills; excludes text query and sort). */
+export function countActiveFilters(filters: SearchFilters): number {
+  let count = 0;
+  if (filters.areaId) count += 1;
+  if (filters.categoryId) count += 1;
+  if (filters.maxRent) count += 1;
+  if (filters.management) count += 1;
+  if (filters.verifiedOnly) count += 1;
+  return count;
+}
 
 /** The bedroom field narrows to one space category; `code` is that category's code. */
 export const BEDROOM_FILTERS: { code: string; label: MessageKey }[] = [

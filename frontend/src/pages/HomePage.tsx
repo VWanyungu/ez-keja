@@ -50,7 +50,7 @@ export default function HomePage() {
       </section>
 
       {/* Zero height, with the panel pulled up by half of its own height: centred on the seam whatever its size. */}
-      <div className="relative z-10 h-0 px-4 md:px-10 lg:px-20">
+      <div className="relative z-10 hidden h-0 px-4 md:block md:px-10 lg:px-20">
         <SearchPanel
           className="mx-auto max-w-[1280px] -translate-y-1/2"
           values={{}}
@@ -60,7 +60,7 @@ export default function HomePage() {
         />
       </div>
 
-      <section className="px-4 pb-24 pt-[72px] md:px-10 lg:px-20">
+      <section className="px-4 pb-24 pt-8 md:px-10 md:pt-[72px] lg:px-20">
         <div className="mx-auto flex max-w-[1280px] flex-col gap-6">
           <div className="flex justify-end">
             <Link
