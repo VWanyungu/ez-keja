@@ -59,7 +59,7 @@ export function BuildingCard({ building, className }: BuildingCardProps) {
       to={`/buildings/${id}`}
       className={cn(
         // One surface, one edge. The only hover effect is a thin border: teal in light, white in dark.
-        'relative flex h-[460px] flex-col justify-end overflow-hidden rounded-[28px] bg-foreground px-5 pb-6 pt-5 text-white shadow-float ring-1 ring-transparent transition-shadow duration-500 ease-fluid hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:ring-white',
+        'relative flex h-[460px] flex-col justify-end overflow-hidden rounded-2xl bg-foreground px-5 pb-6 pt-5 text-white shadow-float ring-1 ring-transparent transition-shadow duration-500 ease-fluid hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:ring-white',
         className,
       )}
     >
